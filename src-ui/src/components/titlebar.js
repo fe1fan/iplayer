@@ -6,7 +6,7 @@ export function render() {
   return `
   <div class="titlebar" id="titlebar" data-tauri-drag-region>
     <span class="titlebar-title" data-tauri-drag-region>iplayer</span>
-    <div class="titlebar-controls">
+    <div class="titlebar-controls" data-tauri-drag-region>
       <button class="titlebar-btn" data-action="minimize" aria-label="最小化">
         <i data-lucide="minus"></i>
       </button>
@@ -23,11 +23,6 @@ export function render() {
 export function bind() {
   const el = document.querySelector('#titlebar');
   if (!el) return;
-
-  // Prevent drag on buttons
-  el.querySelectorAll('.titlebar-btn').forEach(btn => {
-    btn.addEventListener('mousedown', e => e.stopPropagation());
-  });
 
   el.querySelector('[data-action="minimize"]')?.addEventListener('click', () => {
     appWindow.minimize();
