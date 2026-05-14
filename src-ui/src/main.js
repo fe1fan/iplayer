@@ -12,6 +12,7 @@ import * as lyrics from './components/lyrics.js';
 import * as miniMode from './components/mini-mode.js';
 import * as metadataPanel from './components/metadata-panel.js';
 import * as contextMenu from './components/context-menu.js';
+import * as titlebar from './components/titlebar.js';
 import * as toast from './components/toast.js';
 
 const app = document.querySelector('#app');
@@ -29,6 +30,7 @@ function scheduleRender() {
 function renderApp() {
   const s = getState();
   app.innerHTML = `
+    ${titlebar.render()}
     <div class="app" id="appShell">
       ${sidebar.render()}
       ${content.render()}
@@ -46,6 +48,7 @@ function renderApp() {
 }
 
 function bindAll() {
+  titlebar.bind();
   sidebar.bind(app);
   content.bind(app);
   playerBar.bind(app);
