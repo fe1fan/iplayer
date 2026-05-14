@@ -4,9 +4,9 @@ const appWindow = getCurrentWindow();
 
 export function render() {
   return `
-  <div class="titlebar" id="titlebar" data-tauri-drag-region>
-    <span class="titlebar-title" data-tauri-drag-region>iplayer</span>
-    <div class="titlebar-controls" data-tauri-drag-region>
+  <div class="titlebar" id="titlebar">
+    <span class="titlebar-title">iplayer</span>
+    <div class="titlebar-controls">
       <button class="titlebar-btn" data-action="minimize" aria-label="最小化">
         <i data-lucide="minus"></i>
       </button>
@@ -23,6 +23,12 @@ export function render() {
 export function bind() {
   const el = document.querySelector('#titlebar');
   if (!el) return;
+
+  // Drag on mousedown anywhere on titlebar except buttons
+  el.addEventListener('mousedown', e => {
+    if (e.target.closest('.titlebar-btn')) return;
+    appWindow.startDragging();
+  });
 
   el.querySelector('[data-action="minimize"]')?.addEventListener('click', () => {
     appWindow.minimize();
