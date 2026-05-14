@@ -1,0 +1,40 @@
+:root {
+  --bg-base: #0C0C0C;
+  --bg-surface: #141414;
+  --bg-elevated: #1C1C1C;
+  --accent: #F97316;
+  --accent-hover: #FB923C;
+  --accent-muted: rgba(249, 115, 22, 0.12);
+  --text-1: #F0F0F0;
+  --text-2: #888888;
+  --text-3: #555555;
+  --success: #4ADE80;
+  --error: #F87171;
+  --border: rgba(255, 255, 255, 0.06);
+  --font-ui: 'DM Sans', -apple-system, 'Noto Sans SC', sans-serif;
+  --font-lyric: 'Montserrat', 'Noto Sans SC', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-ui);
+  background: var(--bg-base);
+  color: var(--text-1);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

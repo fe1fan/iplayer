@@ -1,0 +1,43 @@
+[package]
+name = "iplayer"
+version = "0.1.0"
+description = "A lightweight cross-platform music player"
+authors = ["fe1fan"]
+license = "MIT"
+repository = "https://github.com/fe1fan/iplayer"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2" }
+
+[dependencies]
+tauri = { version = "2" }
+tauri-plugin-log = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+log = "0.4"
+
+# Audio engine
+symphonia = { version = "0.5", features = ["mp3", "flac", "ogg", "wav", "aac"] }
+rodio = "0.20"
+
+# Metadata
+lofty = "0.22"
+
+# Database
+rusqlite = { version = "0.34", features = ["bundled"] }
+
+# File watching
+notify = "8"
+
+# Utilities
+tokio = { version = "1", features = ["full"] }
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
