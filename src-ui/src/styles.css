@@ -40,7 +40,6 @@ input{font-family:inherit}
 
 /* Titlebar */
 .titlebar{height:var(--titlebar-h);display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:var(--bg-base);-webkit-user-select:none;user-select:none;position:fixed;top:0;left:0;right:0;z-index:40}
-.titlebar-drag{position:absolute;inset:0}
 .titlebar-controls{display:flex;align-items:center;position:relative;z-index:1}
 .titlebar-btn{width:38px;height:var(--titlebar-h);display:flex;align-items:center;justify-content:center;color:var(--text-3);transition:background var(--t-fast),color var(--t-fast)}
 .titlebar-btn:hover{background:var(--bg-surface);color:var(--text-1)}

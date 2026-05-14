@@ -1,10 +1,11 @@
-import { getState } from '../state.js';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+
+const appWindow = getCurrentWindow();
 
 export function render() {
   return `
-  <div class="titlebar" id="titlebar">
-    <div class="titlebar-drag" data-tauri-drag-region></div>
-    <span class="titlebar-title">iplayer</span>
+  <div class="titlebar" id="titlebar" data-tauri-drag-region>
+    <span class="titlebar-title" data-tauri-drag-region>iplayer</span>
     <div class="titlebar-controls">
       <button class="titlebar-btn" data-action="minimize" aria-label="最小化">
         <i data-lucide="minus"></i>
@@ -23,25 +24,22 @@ export function bind() {
   const el = document.querySelector('#titlebar');
   if (!el) return;
 
-  el.querySelector('[data-action="minimize"]')?.addEventListener('click', () => {
-    if (window.__TAURI__) {
-      window.__TAURI__.window.getCurrentWindow().minimize();
-    }
+  // Prevent drag on buttons
+  el.querySelectorAll('.titlebar-btn').forEach(btn => {
+    btn.addEventListener('mousedown', e => e.stopPropagation());
   });
 
-  el.querySelector('[data-action="maximize"]')?.addEventListener('click', () => {
-    if (window.__TAURI__) {
-      const win = window.__TAURI__.window.getCurrentWindow();
-      win.isMaximized().then(maximized => {
-        if (maximized) win.unmaximize();
-        else win.maximize();
-      });
-    }
+  el.querySelector('[data-action="minimize"]')?.addEventListener('click', () => {
+    appWindow.minimize();
+  });
+
+  el.querySelector('[data-action="maximize"]')?.addEventListener('click', async () => {
+    const maximized = await appWindow.isMaximized();
+    if (maximized) appWindow.unmaximize();
+    else appWindow.maximize();
   });
 
   el.querySelector('[data-action="close"]')?.addEventListener('click', () => {
-    if (window.__TAURI__) {
-      window.__TAURI__.window.getCurrentWindow().close();
-    }
+    appWindow.close();
   });
 }
