@@ -2,7 +2,7 @@ import { setState, getState } from '../state.js';
 
 function coverSvg(cls) {
   const fill = cls === 'cover-a' ? '#DBEAFE' : '#DCFCE7';
-  return `<svg viewBox="0 0 180 180"><rect width="180" height="180" fill="${fill}"/></svg>`;
+  return `<svg viewBox="0 0 140 140"><rect width="140" height="140" fill="${fill}"/></svg>`;
 }
 
 export function render() {

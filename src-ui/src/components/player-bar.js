@@ -3,7 +3,7 @@ import { songs, formatDuration, getProgressPercent } from '../mock-data.js';
 
 function coverSvg(cls) {
   const fill = cls === 'cover-a' ? '#DBEAFE' : '#DCFCE7';
-  return `<svg viewBox="0 0 44 44"><rect width="44" height="44" fill="${fill}"/></svg>`;
+  return `<svg viewBox="0 0 36 36"><rect width="36" height="36" fill="${fill}"/></svg>`;
 }
 
 export function render() {

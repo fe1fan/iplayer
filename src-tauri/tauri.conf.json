@@ -11,10 +11,10 @@
     "windows": [
       {
         "title": "iplayer",
-        "width": 860,
-        "height": 580,
-        "minWidth": 860,
-        "minHeight": 580,
+        "width": 720,
+        "height": 460,
+        "minWidth": 720,
+        "minHeight": 460,
         "resizable": true,
         "fullscreen": false,
         "decorations": false

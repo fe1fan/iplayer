@@ -3,7 +3,7 @@ import { songs, albums, formatDuration } from '../mock-data.js';
 
 function coverSvg(cls) {
   const fill = cls === 'cover-a' ? '#DBEAFE' : '#DCFCE7';
-  return `<svg viewBox="0 0 160 160"><rect width="160" height="160" fill="${fill}"/></svg>`;
+  return `<svg viewBox="0 0 140 140"><rect width="140" height="140" fill="${fill}"/></svg>`;
 }
 
 function renderAlbumGrid() {

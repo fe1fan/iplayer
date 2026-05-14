@@ -22,7 +22,7 @@ export function render() {
     <button class="close-btn" data-action="close" aria-label="关闭"><i data-lucide="x"></i></button>
     <div class="np-expanded-body">
       <div class="cover-lg ${song.coverClass}">
-        ${coverSvg(song.coverClass, 280)}
+        ${coverSvg(song.coverClass, 220)}
       </div>
       <div class="track-meta">
         <h2>${song.title}</h2>
