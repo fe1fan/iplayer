@@ -1,0 +1,67 @@
+import { setState, getState } from '../state.js';
+import { songs } from '../mock-data.js';
+
+const menuItems = [
+  { icon: 'play', label: '播放', action: 'play' },
+  { icon: 'list-plus', label: '添加到播放列表', action: 'add-to-list' },
+  { icon: 'disc-3', label: '查看专辑', action: 'view-album' },
+  { icon: 'pencil', label: '修复元数据', action: 'edit-meta' },
+  { divider: true },
+  { icon: 'folder-open', label: '在文件夹中显示', action: 'show-in-folder' },
+];
+
+export function render() {
+  const s = getState();
+
+  return `
+  <div class="ctx-menu${s.contextMenu.open ? ' open' : ''}" id="ctxMenu" role="menu"
+       style="left:${s.contextMenu.x}px;top:${s.contextMenu.y}px">
+    ${menuItems.map(item => {
+      if (item.divider) return '<div class="ctx-divider"></div>';
+      return `<button role="menuitem" data-action="${item.action}"><i data-lucide="${item.icon}"></i> ${item.label}</button>`;
+    }).join('')}
+  </div>`;
+}
+
+export function bind(root) {
+  const el = root.querySelector('#ctxMenu');
+  if (!el) return;
+
+  el.querySelectorAll('button[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.action;
+      const s = getState();
+      const target = s.contextMenu.target;
+      hide();
+
+      if (!target) return;
+
+      switch (action) {
+        case 'play':
+          if (target.type === 'song') {
+            const song = songs.find(s => s.id === target.id);
+            if (song) setState({ playing: { song, isPlaying: true, progress: 0, duration: song.duration } });
+          }
+          break;
+        case 'view-album':
+          if (target.type === 'song') {
+            setState({ view: 'songs', sidebarActive: 'songs' });
+          }
+          break;
+        case 'edit-meta':
+          if (target.type === 'song') {
+            const song = songs.find(s => s.id === target.id);
+            if (song) setState({ metadata: { open: true, song } });
+          } else if (target.type === 'album') {
+            const song = songs.find(s => s.albumId === target.id);
+            if (song) setState({ metadata: { open: true, song } });
+          }
+          break;
+      }
+    });
+  });
+}
+
+function hide() {
+  setState({ contextMenu: { open: false, x: 0, y: 0, target: null } });
+}
