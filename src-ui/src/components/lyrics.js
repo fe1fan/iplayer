@@ -57,7 +57,7 @@ export function render() {
     </div>
     ${bodyContent}
     <div class="lyrics-bottom">
-      <div class="mini-prog" id="lyricsProg"><div class="fill" style="width:${pct}%"></div></div>
+      <div class="mini-prog" id="lyricsProg"><div class="fill" data-progress-fill style="width:${pct}%"></div></div>
       <div class="lyric-controls">
         <button aria-label="上一首" data-action="prev"><i data-lucide="skip-back"></i></button>
         <button aria-label="${playLabel}" data-action="toggle-play"><i data-lucide="${playIcon}"></i></button>

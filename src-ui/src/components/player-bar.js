@@ -15,32 +15,40 @@ export function render() {
   const playLabel = p.isPlaying ? '暂停' : '播放';
   const isLiked = song ? s.likedIds.has(song.id) : false;
   const volPct = s.volume * 100;
+  const curTime = formatDuration(p.progress);
+  const totalTime = formatDuration(p.duration);
 
   return `
   <div class="np-bar" id="npBar" role="region" aria-label="当前播放">
-    <div class="np-progress" id="progressBar">
-      <div class="fill" id="progressFill" style="width:${pct}%"></div>
-    </div>
     <div class="np-info">
       <div class="np-cover ${song?.coverClass || 'cover-a'}" id="npCover" role="button" tabindex="0" aria-label="展开播放视图">
         ${song ? coverSvg(song.coverClass) : coverSvg('cover-a')}
       </div>
       <div class="np-text">
         <div class="title" id="npTitle" role="button" tabindex="0">${song?.title || '未在播放'}</div>
-        <div class="artist">${song ? `${song.artist} · ${song.album}` : '选择一首歌曲开始播放'}</div>
+        <div class="artist">${song ? song.artist : '选择一首歌曲开始播放'}</div>
       </div>
     </div>
-    <div class="np-controls">
-      <button class="ctrl-btn" aria-label="随机播放"><i data-lucide="shuffle"></i></button>
-      <button class="ctrl-btn" aria-label="上一首" data-action="prev"><i data-lucide="skip-back"></i></button>
-      <button class="ctrl-btn play-main" id="playBtn" aria-label="${playLabel}" data-action="toggle-play"><i data-lucide="${playIcon}"></i></button>
-      <button class="ctrl-btn" aria-label="下一首" data-action="next"><i data-lucide="skip-forward"></i></button>
-      <button class="ctrl-btn" aria-label="循环"><i data-lucide="repeat"></i></button>
+    <div class="np-center">
+      <div class="np-controls">
+        <button class="ctrl-btn" aria-label="随机播放"><i data-lucide="shuffle"></i></button>
+        <button class="ctrl-btn" aria-label="上一首" data-action="prev"><i data-lucide="skip-back"></i></button>
+        <button class="ctrl-btn play-main" id="playBtn" aria-label="${playLabel}" data-action="toggle-play"><i data-lucide="${playIcon}"></i></button>
+        <button class="ctrl-btn" aria-label="下一首" data-action="next"><i data-lucide="skip-forward"></i></button>
+        <button class="ctrl-btn" aria-label="循环"><i data-lucide="repeat"></i></button>
+      </div>
+      <div class="np-progress-row">
+        <span class="np-time" data-current-time>${curTime}</span>
+        <div class="np-progress" id="progressBar">
+          <div class="fill" id="progressFill" data-progress-fill style="width:${pct}%"></div>
+        </div>
+        <span class="np-time">${totalTime}</span>
+      </div>
     </div>
     <div class="np-extras">
       <button class="extra-btn${isLiked ? ' liked' : ''}" aria-label="${isLiked ? '已收藏' : '收藏'}" data-action="like"><i data-lucide="heart"></i></button>
       <button class="extra-btn" aria-label="歌词" data-action="lyrics"><i data-lucide="text"></i></button>
-      <button class="extra-btn" aria-label="迷你模式" data-action="mini"><i data-lucide="minimize-2"></i></button>
+      <button class="extra-btn${s.mini ? ' active' : ''}" aria-label="迷你模式" aria-pressed="${s.mini}" data-action="mini"><i data-lucide="minimize-2"></i></button>
       <div class="volume-wrap">
         <button class="extra-btn" aria-label="音量"><i data-lucide="volume-2"></i></button>
         <div class="vol-track" id="volTrack"><div class="fill" style="width:${volPct}%"></div></div>

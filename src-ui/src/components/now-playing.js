@@ -29,8 +29,8 @@ export function render() {
         <p>${song.artist} · ${song.album}</p>
       </div>
       <div class="exp-progress">
-        <div class="exp-progress-track" id="expProgressTrack"><div class="fill" style="width:${pct}%"></div></div>
-        <div class="exp-time"><span>${currentTime}</span><span>${totalTime}</span></div>
+        <div class="exp-progress-track" id="expProgressTrack"><div class="fill" data-progress-fill style="width:${pct}%"></div></div>
+        <div class="exp-time"><span data-current-time>${currentTime}</span><span>${totalTime}</span></div>
       </div>
       <div class="exp-controls">
         <button class="ctrl-btn" aria-label="随机播放"><i data-lucide="shuffle"></i></button>

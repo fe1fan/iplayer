@@ -3,6 +3,7 @@ import { songs, formatDuration, getProgressPercent } from './mock-data.js';
 import { createIcons, icons } from 'lucide';
 import { searchSongs } from './ipc.js';
 import { showToast } from './components/toast.js';
+import { hydrateMiniStateIfNeeded, initWindowModeHandlers, shouldRenderMiniMode, syncMiniWindowMode } from './window-mode.js';
 
 import * as sidebar from './components/sidebar.js';
 import * as content from './components/content.js';
@@ -29,9 +30,10 @@ function scheduleRender() {
 
 function renderApp() {
   const s = getState();
+  const sidebarWidth = sidebar.getSidebarWidth(s);
   app.innerHTML = `
     ${titlebar.render()}
-    <div class="app" id="appShell">
+    <div class="app${s.sidebarCollapsed ? ' sidebar-collapsed' : ''}" id="appShell" style="--sidebar-w-current:${sidebarWidth}px">
       ${sidebar.render()}
       ${content.render()}
       ${playerBar.render()}
@@ -39,7 +41,7 @@ function renderApp() {
     ${nowPlaying.render()}
     ${lyrics.render()}
     ${metadataPanel.render()}
-    ${miniMode.render()}
+    ${shouldRenderMiniMode() ? miniMode.render() : ''}
     ${contextMenu.render()}
     ${toast.render()}
   `;
@@ -79,7 +81,10 @@ subscribe('likedIds', () => {
 
 subscribe('expanded', scheduleRender);
 subscribe('lyrics', scheduleRender);
-subscribe('mini', scheduleRender);
+subscribe('mini', enabled => {
+  scheduleRender();
+  syncMiniWindowMode(enabled);
+});
 subscribe('metadata', scheduleRender);
 
 subscribe('searchQuery', async () => {
@@ -133,19 +138,24 @@ setInterval(() => {
     setState({ playing: { ...s.playing, song: songs[next], progress: 0, duration: songs[next].duration } });
   } else {
     s.playing.progress = progress;
-    const fill = document.querySelector('#progressFill');
-    if (fill) fill.style.width = (progress / s.playing.duration * 100) + '%';
+    const pct = (progress / s.playing.duration * 100) + '%';
+    document.querySelectorAll('[data-progress-fill]').forEach(fill => { fill.style.width = pct; });
+    document.querySelectorAll('[data-current-time]').forEach(el => { el.textContent = formatDuration(progress); });
   }
 }, 1000);
 
 // --- Init ---
-setState({
-  playing: {
-    song: songs[0],
-    isPlaying: false,
-    progress: 0,
-    duration: songs[0].duration,
-  },
-});
+initWindowModeHandlers();
+
+if (!hydrateMiniStateIfNeeded()) {
+  setState({
+    playing: {
+      song: songs[0],
+      isPlaying: false,
+      progress: 0,
+      duration: songs[0].duration,
+    },
+  });
+}
 
 renderApp();

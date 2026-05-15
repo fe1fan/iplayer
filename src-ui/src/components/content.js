@@ -75,7 +75,7 @@ export function render() {
         <button class="btn btn-ghost" aria-label="导入音乐"><i data-lucide="plus-circle"></i> 导入</button>
       </div>
     </div>
-    ${body}
+    <div class="content-body">${body}</div>
   </main>`;
 }
 

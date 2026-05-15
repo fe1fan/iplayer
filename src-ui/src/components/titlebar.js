@@ -1,22 +1,23 @@
-import { getCurrentWindow } from '@tauri-apps/api/window';
-
-const appWindow = getCurrentWindow();
+import { getState, setState } from '../state.js';
+import { toggleSidebarCollapsed } from './sidebar.js';
 
 export function render() {
+  const s = getState();
   return `
   <div class="titlebar" id="titlebar">
-    <span class="titlebar-title">iplayer</span>
-    <div class="titlebar-controls">
-      <button class="titlebar-btn" data-action="minimize" aria-label="最小化">
-        <i data-lucide="minus"></i>
-      </button>
-      <button class="titlebar-btn" data-action="maximize" aria-label="最大化">
-        <i data-lucide="square"></i>
-      </button>
-      <button class="titlebar-btn close" data-action="close" aria-label="关闭">
-        <i data-lucide="x"></i>
-      </button>
+    <div class="titlebar-traffic-lights" data-tauri-drag-region></div>
+    <button class="titlebar-sidebar-toggle" data-action="toggle-sidebar" aria-label="切换侧边栏">
+      <i data-lucide="sidebar"></i>
+    </button>
+    <span class="titlebar-title">iPlayer</span>
+    <div class="titlebar-drag" data-tauri-drag-region></div>
+    <div class="titlebar-search">
+      <i data-lucide="search"></i>
+      <input type="text" id="searchInput" placeholder="搜索歌曲、艺术家…" aria-label="搜索" value="${s.searchQuery}">
     </div>
+    <button class="titlebar-action-btn${s.mini ? ' active' : ''}" data-action="toggle-mini" aria-label="迷你模式" aria-pressed="${s.mini}">
+      <i data-lucide="picture-in-picture-2"></i>
+    </button>
   </div>`;
 }
 
@@ -24,23 +25,24 @@ export function bind() {
   const el = document.querySelector('#titlebar');
   if (!el) return;
 
-  // Drag on mousedown anywhere on titlebar except buttons
-  el.addEventListener('mousedown', e => {
-    if (e.target.closest('.titlebar-btn')) return;
-    appWindow.startDragging();
+  el.querySelector('[data-action="toggle-sidebar"]')?.addEventListener('click', () => {
+    toggleSidebarCollapsed();
   });
 
-  el.querySelector('[data-action="minimize"]')?.addEventListener('click', () => {
-    appWindow.minimize();
+  el.querySelector('[data-action="toggle-mini"]')?.addEventListener('click', () => {
+    const s = getState();
+    if (s.playing.song) setState({ mini: !s.mini, expanded: false, lyrics: false });
   });
 
-  el.querySelector('[data-action="maximize"]')?.addEventListener('click', async () => {
-    const maximized = await appWindow.isMaximized();
-    if (maximized) appWindow.unmaximize();
-    else appWindow.maximize();
-  });
-
-  el.querySelector('[data-action="close"]')?.addEventListener('click', () => {
-    appWindow.close();
-  });
+  const searchInput = el.querySelector('#searchInput');
+  if (searchInput) {
+    let timer;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const q = searchInput.value.trim();
+        setState({ searchQuery: q, view: q ? 'search' : (getState().sidebarActive === 'albums' ? 'albums' : 'songs') });
+      }, 200);
+    });
+  }
 }

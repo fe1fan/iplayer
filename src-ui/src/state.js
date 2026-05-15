@@ -3,6 +3,8 @@ const state = {
   viewMode: 'grid',
   sidebarActive: 'albums',
   searchQuery: '',
+  sidebarCollapsed: false,
+  sidebarWidth: 200,
 
   playing: { song: null, isPlaying: false, progress: 0.38, duration: 355 },
   queue: [],
