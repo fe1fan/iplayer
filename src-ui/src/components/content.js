@@ -2,6 +2,7 @@ import { setState, getState } from '../state.js';
 import { songs, albums, folders, getArtists, formatDuration } from '../mock-data.js';
 import { playSong, playSongList } from '../player-actions.js';
 import { showToast } from './toast.js';
+import * as pluginPage from './plugin-panel.js';
 
 function coverSvg(cls) {
   const fill = cls === 'cover-a' ? '#DBEAFE' : '#DCFCE7';
@@ -72,12 +73,16 @@ export function render() {
     album: selectedAlbum?.title || '专辑',
     artist: s.selectedArtist || '艺术家',
     folder: selectedFolder?.name || '文件夹',
+    plugins: '插件',
+    'plugin-config': '插件配置',
   };
   const title = isSearch ? `搜索 "${s.searchQuery}"` : (titleMap[s.view] || '歌曲');
   const playingId = s.playing.song?.id;
 
   let body;
-  if (s.view === 'albums') {
+  if (s.view === 'plugins' || s.view === 'plugin-config') {
+    body = pluginPage.renderPage();
+  } else if (s.view === 'albums') {
     body = renderAlbumGrid();
   } else if (s.view === 'artists') {
     body = renderEntityGrid(getArtists(), 'artist');
@@ -115,11 +120,11 @@ export function render() {
     <div class="content-header">
       <h1>${title}</h1>
       <div class="actions">
-        <div class="view-toggle">
+        ${s.view === 'plugins' || s.view === 'plugin-config' ? '' : `<div class="view-toggle">
           <button data-view="albums" class="${isAlbumView ? 'active' : ''}" aria-label="网格视图"><i data-lucide="grid-3x3"></i></button>
           <button data-view="songs" class="${!isAlbumView ? 'active' : ''}" aria-label="列表视图"><i data-lucide="list"></i></button>
         </div>
-        <button class="btn btn-ghost" aria-label="导入音乐"><i data-lucide="plus-circle"></i> 导入</button>
+        <button class="btn btn-ghost" aria-label="导入音乐"><i data-lucide="plus-circle"></i> 导入</button>`}
       </div>
     </div>
     <div class="content-body">${body}</div>
@@ -129,6 +134,11 @@ export function render() {
 export function bind(root) {
   const el = root.querySelector('#contentArea') || root.querySelector('.content');
   if (!el) return;
+
+  if (getState().view === 'plugins' || getState().view === 'plugin-config') {
+    pluginPage.bindPage(el);
+    return;
+  }
 
   el.querySelectorAll('.view-toggle button').forEach(btn => {
     btn.addEventListener('click', () => {
