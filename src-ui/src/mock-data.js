@@ -24,6 +24,12 @@ export const songs = [
   { id: 's-12', title: 'Instant Crush', artist: 'Daft Punk ft. Julian Casablancas', album: 'Random Access Memories', albumId: 'a-7', duration: 337, format: 'FLAC 44.1kHz 16bit', coverClass: 'cover-a', year: 2013, track: '7 / 13' },
 ];
 
+export const folders = [
+  { id: 'f-1', name: 'Lossless Classics', path: '~/Music/Lossless Classics', songIds: ['s-1', 's-2', 's-3', 's-5', 's-10'] },
+  { id: 'f-2', name: 'Chinese Pop', path: '~/Music/Chinese Pop', songIds: ['s-4', 's-9'] },
+  { id: 'f-3', name: 'Commute Mix', path: '~/Music/Commute Mix', songIds: ['s-6', 's-7', 's-8', 's-11', 's-12'] },
+];
+
 export const lyricsData = {
   's-1': [
     '', 'Is this the real life?', 'Is this just fantasy?', 'Caught in a landslide',
@@ -47,4 +53,17 @@ export function formatDuration(seconds) {
 export function getProgressPercent(state) {
   if (!state.playing.song || state.playing.duration === 0) return 0;
   return state.playing.progress / state.playing.duration;
+}
+
+export function getArtists() {
+  return Array.from(songs.reduce((map, song) => {
+    const current = map.get(song.artist) || { id: song.artist, name: song.artist, songCount: 0, albumCount: new Set(), coverClass: song.coverClass };
+    current.songCount += 1;
+    current.albumCount.add(song.album);
+    map.set(song.artist, current);
+    return map;
+  }, new Map()).values()).map(artist => ({
+    ...artist,
+    albumCount: artist.albumCount.size,
+  }));
 }

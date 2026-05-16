@@ -1,5 +1,6 @@
 import { setState, getState } from '../state.js';
-import { songs, formatDuration, getProgressPercent } from '../mock-data.js';
+import { formatDuration, getProgressPercent } from '../mock-data.js';
+import { setProgressByPointer, setVolumeByPointer, skipTrack, toggleLike, togglePlay } from '../player-actions.js';
 
 function coverSvg(cls) {
   const fill = cls === 'cover-a' ? '#DBEAFE' : '#DCFCE7';
@@ -71,8 +72,7 @@ export function bind(root) {
   });
 
   el.querySelector('[data-action="toggle-play"]')?.addEventListener('click', () => {
-    const s = getState();
-    setState({ playing: { ...s.playing, isPlaying: !s.playing.isPlaying } });
+    togglePlay();
   });
 
   el.querySelector('[data-action="prev"]')?.addEventListener('click', () => skipTrack(-1));
@@ -80,31 +80,14 @@ export function bind(root) {
   el.querySelector('[data-action="lyrics"]')?.addEventListener('click', () => setState({ mini: false, lyrics: true, expanded: false }));
 
   el.querySelector('#miniProgress')?.addEventListener('click', function(e) {
-    const pct = Math.max(0, Math.min(1, e.offsetX / this.offsetWidth));
-    const s = getState();
-    if (s.playing.song) setState({ playing: { ...s.playing, progress: pct * s.playing.duration } });
+    setProgressByPointer(e, this);
   });
 
   el.querySelector('#miniVolTrack')?.addEventListener('click', function(e) {
-    const pct = Math.max(0, Math.min(1, e.offsetX / this.offsetWidth));
-    setState({ volume: pct });
+    setVolumeByPointer(e, this);
   });
 
   el.querySelector('[data-action="like"]')?.addEventListener('click', () => {
-    const s = getState();
-    if (!s.playing.song) return;
-    const newLiked = new Set(s.likedIds);
-    if (newLiked.has(s.playing.song.id)) newLiked.delete(s.playing.song.id);
-    else newLiked.add(s.playing.song.id);
-    setState({ likedIds: newLiked });
+    toggleLike();
   });
-}
-
-function skipTrack(dir) {
-  const s = getState();
-  if (!s.playing.song) return;
-  const idx = songs.findIndex(song => song.id === s.playing.song.id);
-  if (idx < 0) return;
-  const next = (idx + dir + songs.length) % songs.length;
-  setState({ playing: { ...s.playing, song: songs[next], progress: 0, duration: songs[next].duration } });
 }

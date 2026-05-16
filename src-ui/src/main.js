@@ -4,6 +4,7 @@ import { createIcons, icons } from 'lucide';
 import { searchSongs } from './ipc.js';
 import { showToast } from './components/toast.js';
 import { hydrateMiniStateIfNeeded, initWindowModeHandlers, shouldRenderMiniMode, syncMiniWindowMode } from './window-mode.js';
+import { skipTrack } from './player-actions.js';
 
 import * as sidebar from './components/sidebar.js';
 import * as content from './components/content.js';
@@ -68,16 +69,17 @@ subscribe('view', scheduleRender);
 subscribe('sidebarActive', scheduleRender);
 subscribe('playing', scheduleRender);
 subscribe('likedIds', scheduleRender);
+subscribe('recentIds', scheduleRender);
+subscribe('playlists', scheduleRender);
+subscribe('activePlaylistId', scheduleRender);
+subscribe('selectedAlbumId', scheduleRender);
+subscribe('selectedArtist', scheduleRender);
+subscribe('selectedFolder', scheduleRender);
+subscribe('shuffle', scheduleRender);
+subscribe('loopMode', scheduleRender);
+subscribe('lyricsPanel', scheduleRender);
 subscribe('volume', scheduleRender);
 subscribe('contextMenu', scheduleRender);
-
-subscribe('likedIds', () => {
-  const s = getState();
-  if (s.playing.song) {
-    const isLiked = s.likedIds.has(s.playing.song.id);
-    showToast(isLiked ? '已添加到收藏' : '已从收藏移除');
-  }
-});
 
 subscribe('expanded', scheduleRender);
 subscribe('lyrics', scheduleRender);
@@ -133,9 +135,8 @@ setInterval(() => {
   if (!s.playing.isPlaying || !s.playing.song) return;
   const progress = s.playing.progress + 1;
   if (progress >= s.playing.duration) {
-    const idx = songs.findIndex(song => song.id === s.playing.song.id);
-    const next = (idx + 1) % songs.length;
-    setState({ playing: { ...s.playing, song: songs[next], progress: 0, duration: songs[next].duration } });
+    if (s.loopMode === 'off') setState({ playing: { ...s.playing, progress: s.playing.duration, isPlaying: false } });
+    else skipTrack(1);
   } else {
     s.playing.progress = progress;
     const pct = (progress / s.playing.duration * 100) + '%';
@@ -155,6 +156,8 @@ if (!hydrateMiniStateIfNeeded()) {
       progress: 0,
       duration: songs[0].duration,
     },
+    queue: songs.map(song => song.id),
+    queueIndex: 0,
   });
 }
 

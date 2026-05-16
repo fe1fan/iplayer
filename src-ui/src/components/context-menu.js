@@ -1,5 +1,7 @@
 import { setState, getState } from '../state.js';
 import { songs } from '../mock-data.js';
+import { addSongsToPlaylist, addToPlaylist, playSong, playSongList } from '../player-actions.js';
+import { showToast } from './toast.js';
 
 const menuItems = [
   { icon: 'play', label: '播放', action: 'play' },
@@ -39,13 +41,24 @@ export function bind(root) {
       switch (action) {
         case 'play':
           if (target.type === 'song') {
-            const song = songs.find(s => s.id === target.id);
-            if (song) setState({ playing: { song, isPlaying: true, progress: 0, duration: song.duration } });
+            playSong(target.id, songs);
+          } else if (target.type === 'album') {
+            const albumSongs = songs.filter(song => song.albumId === target.id);
+            playSongList(albumSongs, albumSongs[0]?.id);
+          }
+          break;
+        case 'add-to-list':
+          if (target.type === 'song') addToPlaylist(target.id);
+          else if (target.type === 'album') {
+            addSongsToPlaylist(songs.filter(song => song.albumId === target.id).map(song => song.id));
           }
           break;
         case 'view-album':
           if (target.type === 'song') {
-            setState({ view: 'songs', sidebarActive: 'songs' });
+            const song = songs.find(s => s.id === target.id);
+            if (song) setState({ view: 'album', sidebarActive: 'albums', selectedAlbumId: song.albumId });
+          } else if (target.type === 'album') {
+            setState({ view: 'album', sidebarActive: 'albums', selectedAlbumId: target.id });
           }
           break;
         case 'edit-meta':
@@ -56,6 +69,9 @@ export function bind(root) {
             const song = songs.find(s => s.albumId === target.id);
             if (song) setState({ metadata: { open: true, song } });
           }
+          break;
+        case 'show-in-folder':
+          showToast('已模拟打开所在文件夹');
           break;
       }
     });

@@ -1,4 +1,6 @@
 import { setState, getState } from '../state.js';
+import { songs } from '../mock-data.js';
+import { showToast } from './toast.js';
 
 function coverSvg(cls) {
   const fill = cls === 'cover-a' ? '#DBEAFE' : '#DCFCE7';
@@ -21,8 +23,8 @@ export function render() {
       <div class="cover-edit ${song.coverClass}">
         ${coverSvg(song.coverClass)}
         <div class="cover-actions">
-          <button aria-label="搜索封面"><i data-lucide="search"></i> 搜索</button>
-          <button aria-label="本地上传"><i data-lucide="upload"></i> 本地</button>
+          <button data-action="cover-search" aria-label="搜索封面"><i data-lucide="search"></i> 搜索</button>
+          <button data-action="cover-upload" aria-label="本地上传"><i data-lucide="upload"></i> 本地</button>
         </div>
       </div>
       <div class="field-group">
@@ -51,7 +53,7 @@ export function render() {
         <label>格式信息</label>
         <div class="format-info">${song.format || 'Unknown'}</div>
       </div>
-      <button class="auto-match" aria-label="从 MusicBrainz 自动匹配">
+      <button class="auto-match" data-action="auto-match" aria-label="从 MusicBrainz 自动匹配">
         <i data-lucide="database"></i> 从 MusicBrainz 自动匹配
       </button>
     </div>
@@ -68,7 +70,36 @@ export function bind(root) {
 
   el.querySelector('[data-action="close"]')?.addEventListener('click', () => closePanel());
   el.querySelector('[data-action="cancel"]')?.addEventListener('click', () => closePanel());
+  el.querySelector('[data-action="cover-search"]')?.addEventListener('click', () => showToast('已模拟匹配 3 张候选封面'));
+  el.querySelector('[data-action="cover-upload"]')?.addEventListener('click', () => showToast('本地封面上传入口已就绪'));
+  el.querySelector('[data-action="auto-match"]')?.addEventListener('click', () => {
+    const song = getState().metadata.song;
+    if (!song) return;
+    el.querySelector('#metaTitle').value = song.title.trim();
+    el.querySelector('#metaArtist').value = song.artist.trim();
+    el.querySelector('#metaAlbum').value = song.album.trim();
+    el.querySelector('#metaYear').value = song.year || '';
+    el.querySelector('#metaTrack').value = song.track || '';
+    showToast('已填入模拟匹配结果');
+  });
   el.querySelector('[data-action="apply"]')?.addEventListener('click', () => {
+    const s = getState();
+    const song = s.metadata.song;
+    if (song) {
+      const target = songs.find(item => item.id === song.id);
+      const next = {
+        ...song,
+        title: el.querySelector('#metaTitle')?.value.trim() || song.title,
+        artist: el.querySelector('#metaArtist')?.value.trim() || song.artist,
+        album: el.querySelector('#metaAlbum')?.value.trim() || song.album,
+        year: Number(el.querySelector('#metaYear')?.value) || song.year,
+        track: el.querySelector('#metaTrack')?.value.trim() || song.track,
+      };
+      if (target) Object.assign(target, next);
+      if (s.playing.song?.id === song.id) {
+        setState({ playing: { ...s.playing, song: target || next } });
+      }
+    }
     closePanel();
     setState({ _toast: { msg: '元数据修复完成', type: 'success', ts: Date.now() } });
   });

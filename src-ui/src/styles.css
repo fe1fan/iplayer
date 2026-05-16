@@ -125,6 +125,14 @@ body.mini-window .titlebar,body.mini-window .app,body.mini-window .overlay,body.
 .play-btn-circle svg{width:14px;height:14px}
 .album-card .title{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .album-card .artist{font-size:11px;color:var(--text-3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.entity-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.entity-card{display:grid;grid-template-columns:28px minmax(0,1fr);grid-template-rows:auto auto;column-gap:8px;align-items:center;text-align:left;padding:9px 10px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg-base);transition:background var(--t-fast),border-color var(--t-fast)}
+.entity-card:hover{background:var(--bg-surface);border-color:rgba(0,0,0,0.12)}
+.entity-icon{grid-row:1/3;width:28px;height:28px;border-radius:var(--r-sm);background:var(--bg-surface);display:flex;align-items:center;justify-content:center;color:var(--text-3)}
+.entity-icon svg{width:14px;height:14px}
+.entity-main{font-size:12px;font-weight:600;color:var(--text-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.entity-meta{font-size:10px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.empty-state{text-align:center;padding:80px 0;color:var(--text-3)}
 
 /* ── Song List ── */
 .song-list{width:100%;border-collapse:collapse}
@@ -158,6 +166,7 @@ body.mini-window .titlebar,body.mini-window .app,body.mini-window .overlay,body.
 .np-controls{display:flex;align-items:center;gap:4px}
 .ctrl-btn{color:var(--text-2);width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-sm);transition:color var(--t-fast),background var(--t-fast)}
 .ctrl-btn:hover{color:var(--text-1);background:var(--bg-surface)}
+.ctrl-btn.active{color:var(--accent);background:var(--accent-muted)}
 .ctrl-btn svg{width:16px;height:16px}
 .ctrl-btn.play-main{width:34px;height:34px;background:var(--accent);color:#fff;border-radius:var(--r-full)}
 .ctrl-btn.play-main:hover{background:var(--accent-hover)}
@@ -227,6 +236,13 @@ body.mini-window .titlebar,body.mini-window .app,body.mini-window .overlay,body.
 .lyrics-empty p{font-size:13px;margin-bottom:10px}
 .lyrics-empty button{font-size:12px;color:var(--accent);font-weight:500;padding:6px 14px;border-radius:var(--r-sm);transition:background var(--t-fast)}
 .lyrics-empty button:hover{background:var(--accent-muted)}
+.queue-body{width:min(520px,80vw);padding:0;mask-image:none;-webkit-mask-image:none}
+.queue-list{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left}
+.queue-row{display:grid;grid-template-columns:28px minmax(0,1fr) minmax(90px,0.7fr) 44px;gap:8px;align-items:center;width:100%;padding:6px 8px;border-radius:var(--r-sm);font-size:12px;color:var(--text-2);transition:background var(--t-fast),color var(--t-fast)}
+.queue-row:hover{background:var(--bg-surface);color:var(--text-1)}
+.queue-row.active{background:var(--accent-muted);color:var(--text-1)}
+.queue-index,.queue-time{font-family:var(--font-mono);font-size:10px;color:var(--text-3)}
+.queue-title,.queue-artist{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lyrics-bottom{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:2;display:flex;flex-direction:column;align-items:center;gap:10px;width:55%}
 .mini-prog{width:100%;height:3px;background:var(--bg-elevated);border-radius:2px;cursor:pointer}
 .mini-prog .fill{height:100%;background:var(--accent);border-radius:2px}

@@ -1,5 +1,6 @@
 import { getState, setState } from '../state.js';
 import { toggleSidebarCollapsed } from './sidebar.js';
+import { showToast } from './toast.js';
 
 export function render() {
   const s = getState();
@@ -32,6 +33,7 @@ export function bind() {
   el.querySelector('[data-action="toggle-mini"]')?.addEventListener('click', () => {
     const s = getState();
     if (s.playing.song) setState({ mini: !s.mini, expanded: false, lyrics: false });
+    else showToast('请先选择一首歌曲', 'error');
   });
 
   const searchInput = el.querySelector('#searchInput');
@@ -41,7 +43,13 @@ export function bind() {
       clearTimeout(timer);
       timer = setTimeout(() => {
         const q = searchInput.value.trim();
-        setState({ searchQuery: q, view: q ? 'search' : (getState().sidebarActive === 'albums' ? 'albums' : 'songs') });
+        const s = getState();
+        const restoredView = s.sidebarActive?.startsWith('pl-') ? 'playlist' : (s.sidebarActive === 'albums' ? 'albums' : s.sidebarActive || 'songs');
+        setState({
+          searchQuery: q,
+          view: q ? 'search' : restoredView,
+          activePlaylistId: q ? null : s.activePlaylistId,
+        });
       }, 200);
     });
   }

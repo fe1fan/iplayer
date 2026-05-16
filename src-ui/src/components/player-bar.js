@@ -1,5 +1,6 @@
 import { setState, getState } from '../state.js';
-import { songs, formatDuration, getProgressPercent } from '../mock-data.js';
+import { formatDuration, getProgressPercent } from '../mock-data.js';
+import { cycleLoopMode, setProgressByPointer, setVolumeByPointer, skipTrack, toggleLike, togglePlay, toggleShuffle } from '../player-actions.js';
 
 function coverSvg(cls) {
   const fill = cls === 'cover-a' ? '#DBEAFE' : '#DCFCE7';
@@ -17,6 +18,8 @@ export function render() {
   const volPct = s.volume * 100;
   const curTime = formatDuration(p.progress);
   const totalTime = formatDuration(p.duration);
+  const repeatIcon = s.loopMode === 'one' ? 'repeat-1' : 'repeat';
+  const repeatLabel = s.loopMode === 'one' ? '单曲循环' : s.loopMode === 'off' ? '循环关闭' : '列表循环';
 
   return `
   <div class="np-bar" id="npBar" role="region" aria-label="当前播放">
@@ -31,11 +34,11 @@ export function render() {
     </div>
     <div class="np-center">
       <div class="np-controls">
-        <button class="ctrl-btn" aria-label="随机播放"><i data-lucide="shuffle"></i></button>
+        <button class="ctrl-btn${s.shuffle ? ' active' : ''}" aria-label="随机播放" aria-pressed="${s.shuffle}" data-action="shuffle"><i data-lucide="shuffle"></i></button>
         <button class="ctrl-btn" aria-label="上一首" data-action="prev"><i data-lucide="skip-back"></i></button>
         <button class="ctrl-btn play-main" id="playBtn" aria-label="${playLabel}" data-action="toggle-play"><i data-lucide="${playIcon}"></i></button>
         <button class="ctrl-btn" aria-label="下一首" data-action="next"><i data-lucide="skip-forward"></i></button>
-        <button class="ctrl-btn" aria-label="循环"><i data-lucide="repeat"></i></button>
+        <button class="ctrl-btn${s.loopMode !== 'off' ? ' active' : ''}" aria-label="${repeatLabel}" data-action="repeat"><i data-lucide="${repeatIcon}"></i></button>
       </div>
       <div class="np-progress-row">
         <span class="np-time" data-current-time>${curTime}</span>
@@ -62,16 +65,13 @@ export function bind(root) {
   if (!bar) return;
 
   bar.querySelector('[data-action="toggle-play"]')?.addEventListener('click', () => {
-    const s = getState();
-    if (!s.playing.song) {
-      if (songs.length) setState({ playing: { ...s.playing, song: songs[0], isPlaying: true, duration: songs[0].duration, progress: 0 } });
-      return;
-    }
-    setState({ playing: { ...s.playing, isPlaying: !s.playing.isPlaying } });
+    togglePlay();
   });
 
-  bar.querySelector('[data-action="prev"]')?.addEventListener('click', () => skip(-1));
-  bar.querySelector('[data-action="next"]')?.addEventListener('click', () => skip(1));
+  bar.querySelector('[data-action="prev"]')?.addEventListener('click', () => skipTrack(-1));
+  bar.querySelector('[data-action="next"]')?.addEventListener('click', () => skipTrack(1));
+  bar.querySelector('[data-action="shuffle"]')?.addEventListener('click', () => toggleShuffle());
+  bar.querySelector('[data-action="repeat"]')?.addEventListener('click', () => cycleLoopMode());
 
   bar.querySelector('#npCover')?.addEventListener('click', () => {
     const s = getState();
@@ -95,31 +95,10 @@ export function bind(root) {
   });
 
   bar.querySelector('#progressBar')?.addEventListener('click', function(e) {
-    const pct = e.offsetX / this.offsetWidth;
-    const s = getState();
-    if (s.playing.song) setState({ playing: { ...s.playing, progress: pct * s.playing.duration } });
+    setProgressByPointer(e, this);
   });
 
   bar.querySelector('#volTrack')?.addEventListener('click', function(e) {
-    const pct = Math.max(0, Math.min(1, e.offsetX / this.offsetWidth));
-    setState({ volume: pct });
+    setVolumeByPointer(e, this);
   });
-}
-
-function skip(dir) {
-  const s = getState();
-  if (!s.playing.song) return;
-  const idx = songs.findIndex(song => song.id === s.playing.song.id);
-  if (idx < 0) return;
-  const next = (idx + dir + songs.length) % songs.length;
-  setState({ playing: { ...s.playing, song: songs[next], progress: 0, duration: songs[next].duration } });
-}
-
-function toggleLike() {
-  const s = getState();
-  if (!s.playing.song) return;
-  const newLiked = new Set(s.likedIds);
-  if (newLiked.has(s.playing.song.id)) newLiked.delete(s.playing.song.id);
-  else newLiked.add(s.playing.song.id);
-  setState({ likedIds: newLiked });
 }

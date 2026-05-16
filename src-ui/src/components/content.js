@@ -1,5 +1,7 @@
 import { setState, getState } from '../state.js';
-import { songs, albums, formatDuration } from '../mock-data.js';
+import { songs, albums, folders, getArtists, formatDuration } from '../mock-data.js';
+import { playSong, playSongList } from '../player-actions.js';
+import { showToast } from './toast.js';
 
 function coverSvg(cls) {
   const fill = cls === 'cover-a' ? '#DBEAFE' : '#DCFCE7';
@@ -21,6 +23,19 @@ function renderAlbumGrid() {
   </div>`;
 }
 
+function renderEntityGrid(items, type) {
+  const icon = type === 'artist' ? 'mic-2' : 'folder';
+  return `<div class="entity-grid">
+    ${items.map(item => `
+      <button class="entity-card" data-${type}-id="${item.id}">
+        <span class="entity-icon"><i data-lucide="${icon}"></i></span>
+        <span class="entity-main">${item.name}</span>
+        <span class="entity-meta">${type === 'artist' ? `${item.albumCount} 张专辑 · ${item.songCount} 首歌` : `${item.songIds.length} 首歌`}</span>
+      </button>
+    `).join('')}
+  </div>`;
+}
+
 function renderSongList(songList, playingId) {
   return `<table class="song-list" role="table">
     <thead><tr>
@@ -29,7 +44,7 @@ function renderSongList(songList, playingId) {
     <tbody>
     ${songList.map((song, i) => {
       const isPlaying = song.id === playingId;
-      return `<tr class="${isPlaying ? 'playing' : ''}" data-song-id="${song.id}">
+      return `<tr class="${isPlaying ? 'playing' : ''}" data-song-id="${song.id}" tabindex="0">
         <td>${isPlaying ? '<div class="playing-icon"><span></span><span></span><span></span></div>' : `<span class="row-num">${i + 1}</span>`}</td>
         <td>${song.title}</td>
         <td>${song.artist}</td>
@@ -45,18 +60,50 @@ export function render() {
   const s = getState();
   const isAlbumView = s.view === 'albums';
   const isSearch = s.view === 'search';
-  const title = isSearch ? `搜索 "${s.searchQuery}"` : isAlbumView ? '专辑' : '歌曲';
+  const activePlaylist = s.playlists.find(pl => pl.id === s.activePlaylistId);
+  const selectedAlbum = albums.find(album => album.id === s.selectedAlbumId);
+  const selectedFolder = folders.find(folder => folder.id === s.selectedFolder);
+  const titleMap = {
+    albums: '专辑',
+    songs: '歌曲',
+    artists: '艺术家',
+    folders: '文件夹',
+    playlist: activePlaylist?.name || '播放列表',
+    album: selectedAlbum?.title || '专辑',
+    artist: s.selectedArtist || '艺术家',
+    folder: selectedFolder?.name || '文件夹',
+  };
+  const title = isSearch ? `搜索 "${s.searchQuery}"` : (titleMap[s.view] || '歌曲');
   const playingId = s.playing.song?.id;
 
   let body;
-  if (isAlbumView) {
+  if (s.view === 'albums') {
     body = renderAlbumGrid();
+  } else if (s.view === 'artists') {
+    body = renderEntityGrid(getArtists(), 'artist');
+  } else if (s.view === 'folders') {
+    body = renderEntityGrid(folders, 'folder');
   } else {
-    const list = isSearch ? (s._searchResults || []) : songs;
+    let list = songs;
+    if (isSearch) list = s._searchResults || [];
+    if (s.view === 'playlist') {
+      if (s.activePlaylistId === 'liked') list = songs.filter(song => s.likedIds.has(song.id));
+      else if (s.activePlaylistId === 'recent') list = s.recentIds.map(id => songs.find(song => song.id === id)).filter(Boolean);
+      else list = songs.filter(song => activePlaylist?.songIds?.includes(song.id));
+    }
+    if (s.view === 'album') list = songs.filter(song => song.albumId === s.selectedAlbumId);
+    if (s.view === 'artist') list = songs.filter(song => song.artist === s.selectedArtist);
+    if (s.view === 'folder') list = songs.filter(song => selectedFolder?.songIds.includes(song.id));
+
     if (list.length === 0 && isSearch) {
-      body = `<div style="text-align:center;padding:80px 0;color:var(--text-3)">
+      body = `<div class="empty-state">
         <i data-lucide="search" style="width:32px;height:32px;opacity:0.3"></i>
         <p style="margin-top:12px">未找到匹配的歌曲</p>
+      </div>`;
+    } else if (list.length === 0) {
+      body = `<div class="empty-state">
+        <i data-lucide="music" style="width:32px;height:32px;opacity:0.3"></i>
+        <p style="margin-top:12px">这里还没有歌曲</p>
       </div>`;
     } else {
       body = renderSongList(list, playingId);
@@ -90,8 +137,14 @@ export function bind(root) {
     });
   });
 
+  el.querySelector('[aria-label="导入音乐"]')?.addEventListener('click', () => {
+    showToast('已模拟导入 12 首歌曲');
+  });
+
   el.querySelectorAll('tr[data-song-id]').forEach(tr => {
-    tr.addEventListener('dblclick', () => playSong(tr.dataset.songId));
+    tr.addEventListener('click', () => setState({ selectedSongId: tr.dataset.songId }));
+    tr.addEventListener('dblclick', () => playSong(tr.dataset.songId, currentList()));
+    tr.addEventListener('keydown', e => { if (e.key === 'Enter') playSong(tr.dataset.songId, currentList()); });
     tr.addEventListener('contextmenu', e => {
       e.preventDefault();
       setState({ contextMenu: { open: true, x: e.clientX, y: e.clientY, target: { type: 'song', id: tr.dataset.songId } } });
@@ -99,11 +152,16 @@ export function bind(root) {
   });
 
   el.querySelectorAll('.album-card').forEach(card => {
+    card.addEventListener('click', e => {
+      if (e.target.closest('[data-play-album]')) return;
+      setState({ view: 'album', sidebarActive: 'albums', selectedAlbumId: card.dataset.albumId });
+    });
     card.addEventListener('dblclick', () => {
       const albumId = card.dataset.albumId;
       const albumSongs = songs.filter(s => s.albumId === albumId);
-      if (albumSongs.length) playSong(albumSongs[0].id);
+      if (albumSongs.length) playSongList(albumSongs, albumSongs[0].id);
     });
+    card.addEventListener('keydown', e => { if (e.key === 'Enter') card.click(); });
     card.addEventListener('contextmenu', e => {
       e.preventDefault();
       setState({ contextMenu: { open: true, x: e.clientX, y: e.clientY, target: { type: 'album', id: card.dataset.albumId } } });
@@ -115,13 +173,37 @@ export function bind(root) {
       e.stopPropagation();
       const albumId = btn.dataset.playAlbum;
       const albumSongs = songs.filter(s => s.albumId === albumId);
-      if (albumSongs.length) playSong(albumSongs[0].id);
+      if (albumSongs.length) playSongList(albumSongs, albumSongs[0].id);
+    });
+  });
+
+  el.querySelectorAll('[data-artist-id]').forEach(card => {
+    card.addEventListener('click', () => {
+      setState({ view: 'artist', sidebarActive: 'artists', selectedArtist: card.dataset.artistId });
+    });
+  });
+
+  el.querySelectorAll('[data-folder-id]').forEach(card => {
+    card.addEventListener('click', () => {
+      setState({ view: 'folder', sidebarActive: 'folders', selectedFolder: card.dataset.folderId });
     });
   });
 }
 
-function playSong(songId) {
-  const song = songs.find(s => s.id === songId);
-  if (!song) return;
-  setState({ playing: { song, isPlaying: true, progress: 0, duration: song.duration } });
+function currentList() {
+  const s = getState();
+  const activePlaylist = s.playlists.find(pl => pl.id === s.activePlaylistId);
+  if (s.view === 'search') return s._searchResults || [];
+  if (s.view === 'playlist') {
+    if (s.activePlaylistId === 'liked') return songs.filter(song => s.likedIds.has(song.id));
+    if (s.activePlaylistId === 'recent') return s.recentIds.map(id => songs.find(song => song.id === id)).filter(Boolean);
+    return songs.filter(song => activePlaylist?.songIds?.includes(song.id));
+  }
+  if (s.view === 'album') return songs.filter(song => song.albumId === s.selectedAlbumId);
+  if (s.view === 'artist') return songs.filter(song => song.artist === s.selectedArtist);
+  if (s.view === 'folder') {
+    const folder = folders.find(item => item.id === s.selectedFolder);
+    return songs.filter(song => folder?.songIds.includes(song.id));
+  }
+  return songs;
 }

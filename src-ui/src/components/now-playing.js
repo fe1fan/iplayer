@@ -1,5 +1,6 @@
 import { setState, getState } from '../state.js';
-import { songs, formatDuration, getProgressPercent } from '../mock-data.js';
+import { formatDuration, getProgressPercent } from '../mock-data.js';
+import { cycleLoopMode, setProgressByPointer, skipTrack, togglePlay, toggleShuffle } from '../player-actions.js';
 
 function coverSvg(cls, size) {
   const fill = cls === 'cover-a' ? '#DBEAFE' : '#DCFCE7';
@@ -16,6 +17,8 @@ export function render() {
   const playIcon = s.playing.isPlaying ? 'pause' : 'play';
   const playLabel = s.playing.isPlaying ? '暂停' : '播放';
   const openCls = s.expanded ? ' open' : '';
+  const repeatIcon = s.loopMode === 'one' ? 'repeat-1' : 'repeat';
+  const repeatLabel = s.loopMode === 'one' ? '单曲循环' : s.loopMode === 'off' ? '循环关闭' : '列表循环';
 
   return `
   <div class="overlay np-expanded${openCls}" id="npExpanded" role="dialog" aria-label="播放视图" aria-modal="true">
@@ -33,11 +36,11 @@ export function render() {
         <div class="exp-time"><span data-current-time>${currentTime}</span><span>${totalTime}</span></div>
       </div>
       <div class="exp-controls">
-        <button class="ctrl-btn" aria-label="随机播放"><i data-lucide="shuffle"></i></button>
+        <button class="ctrl-btn${s.shuffle ? ' active' : ''}" aria-label="随机播放" data-action="shuffle"><i data-lucide="shuffle"></i></button>
         <button class="ctrl-btn" aria-label="上一首" data-action="prev"><i data-lucide="skip-back"></i></button>
         <button class="play-main-lg" id="playBtnExp" aria-label="${playLabel}" data-action="toggle-play"><i data-lucide="${playIcon}"></i></button>
         <button class="ctrl-btn" aria-label="下一首" data-action="next"><i data-lucide="skip-forward"></i></button>
-        <button class="ctrl-btn" aria-label="循环"><i data-lucide="repeat"></i></button>
+        <button class="ctrl-btn${s.loopMode !== 'off' ? ' active' : ''}" aria-label="${repeatLabel}" data-action="repeat"><i data-lucide="${repeatIcon}"></i></button>
       </div>
     </div>
   </div>`;
@@ -50,25 +53,15 @@ export function bind(root) {
   el.querySelector('[data-action="close"]')?.addEventListener('click', () => setState({ expanded: false }));
 
   el.querySelector('[data-action="toggle-play"]')?.addEventListener('click', () => {
-    const s = getState();
-    setState({ playing: { ...s.playing, isPlaying: !s.playing.isPlaying } });
+    togglePlay();
   });
 
   el.querySelector('[data-action="prev"]')?.addEventListener('click', () => skipTrack(-1));
   el.querySelector('[data-action="next"]')?.addEventListener('click', () => skipTrack(1));
+  el.querySelector('[data-action="shuffle"]')?.addEventListener('click', () => toggleShuffle());
+  el.querySelector('[data-action="repeat"]')?.addEventListener('click', () => cycleLoopMode());
 
   el.querySelector('#expProgressTrack')?.addEventListener('click', function(e) {
-    const pct = e.offsetX / this.offsetWidth;
-    const s = getState();
-    if (s.playing.song) setState({ playing: { ...s.playing, progress: pct * s.playing.duration } });
+    setProgressByPointer(e, this);
   });
-}
-
-function skipTrack(dir) {
-  const s = getState();
-  if (!s.playing.song) return;
-  const idx = songs.findIndex(song => song.id === s.playing.song.id);
-  if (idx < 0) return;
-  const next = (idx + dir + songs.length) % songs.length;
-  setState({ playing: { ...s.playing, song: songs[next], progress: 0, duration: songs[next].duration } });
 }

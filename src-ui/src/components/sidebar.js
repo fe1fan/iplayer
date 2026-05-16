@@ -1,4 +1,5 @@
 import { setState, getState } from '../state.js';
+import { createPlaylist } from '../player-actions.js';
 
 const COLLAPSED_W = 44;
 const DEFAULT_W = 176;
@@ -45,7 +46,8 @@ export function render() {
   ];
   const plItems = s.playlists.map(pl => {
     const icon = pl.icon === 'heart' ? 'heart' : pl.icon === 'clock' ? 'clock' : 'list-music';
-    return `<div class="sidebar-item" role="button" tabindex="0" data-nav="pl-${pl.id}" aria-label="${pl.name}" title="${pl.name}">
+    const active = s.sidebarActive === `pl-${pl.id}` ? ' active' : '';
+    return `<div class="sidebar-item${active}" role="button" tabindex="0" data-nav="pl-${pl.id}" aria-label="${pl.name}" title="${pl.name}">
       <i data-lucide="${icon}"></i><span class="sidebar-label">${pl.name}</span>
     </div>`;
   }).join('');
@@ -80,11 +82,26 @@ export function bind(root) {
   el.querySelectorAll('.sidebar-item').forEach(item => {
     item.addEventListener('click', () => {
       const nav = item.dataset.nav;
-      if (!nav || nav.startsWith('pl-')) return;
-      setState({ sidebarActive: nav, view: nav === 'albums' ? 'albums' : 'songs' });
+      if (!nav) return;
+      if (nav.startsWith('pl-')) {
+        const playlistId = nav.slice(3);
+        setState({ sidebarActive: nav, view: 'playlist', activePlaylistId: playlistId, searchQuery: '' });
+        return;
+      }
+      setState({
+        sidebarActive: nav,
+        view: nav,
+        activePlaylistId: null,
+        searchQuery: '',
+        selectedAlbumId: null,
+        selectedArtist: null,
+        selectedFolder: null,
+      });
     });
     item.addEventListener('keydown', e => { if (e.key === 'Enter') item.click(); });
   });
+
+  el.querySelector('.new-pl-btn')?.addEventListener('click', () => createPlaylist());
 
   const resizer = el.querySelector('#sidebarResizer');
   if (resizer) {
