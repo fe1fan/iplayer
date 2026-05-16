@@ -267,6 +267,55 @@ pub fn add_songs_to_playlist(
     get_playlist(conn, playlist_id)?.ok_or_else(|| AppError::not_found("playlist not found"))
 }
 
+pub fn rename_playlist(conn: &Connection, playlist_id: &str, name: &str) -> CommandResult<Playlist> {
+    let mut playlist = get_playlist(conn, playlist_id)?
+        .ok_or_else(|| AppError::not_found("playlist not found"))?;
+    if playlist.system {
+        return Err(AppError::state("system playlists cannot be renamed"));
+    }
+    conn.execute(
+        "UPDATE playlists SET name = ?2, updated_at = CURRENT_TIMESTAMP WHERE id = ?1",
+        params![playlist_id, name],
+    )?;
+    playlist.name = name.to_string();
+    Ok(playlist)
+}
+
+pub fn delete_playlist(conn: &Connection, playlist_id: &str) -> CommandResult<bool> {
+    let playlist = get_playlist(conn, playlist_id)?;
+    let Some(playlist) = playlist else { return Ok(false) };
+    if playlist.system {
+        return Err(AppError::state("system playlists cannot be deleted"));
+    }
+    conn.execute("DELETE FROM playlists WHERE id = ?1", params![playlist_id])?;
+    Ok(true)
+}
+
+pub fn remove_song_from_playlist(
+    conn: &Connection,
+    playlist_id: &str,
+    song_id: &str,
+) -> CommandResult<Playlist> {
+    let playlist = get_playlist(conn, playlist_id)?
+        .ok_or_else(|| AppError::not_found("playlist not found"))?;
+    if playlist.system {
+        return Err(AppError::state(
+            "songs cannot be removed from system playlists directly",
+        ));
+    }
+    conn.execute(
+        "DELETE FROM playlist_songs WHERE playlist_id = ?1 AND song_id = ?2",
+        params![playlist_id, song_id],
+    )?;
+    get_playlist(conn, playlist_id)?.ok_or_else(|| AppError::not_found("playlist not found"))
+}
+
+pub fn list_watched_folders(conn: &Connection) -> CommandResult<Vec<(String, String)>> {
+    let mut stmt = conn.prepare("SELECT id, path FROM folders")?;
+    let rows = stmt.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))?;
+    rows.collect::<Result<Vec<_>, _>>().map_err(AppError::from)
+}
+
 pub fn toggle_like(conn: &Connection, song_id: &str) -> CommandResult<bool> {
     if get_song(conn, song_id)?.is_none() {
         return Err(AppError::not_found("song not found"));
@@ -672,6 +721,47 @@ mod tests {
             .expect("add songs");
 
         assert_eq!(updated.song_ids, vec!["s-1".to_string(), "s-2".to_string()]);
+    }
+
+    #[test]
+    fn renames_deletes_and_removes_from_playlists() {
+        let conn = setup();
+        let playlist = create_playlist(&conn, Some("原名".into())).expect("playlist");
+        let _ = add_songs_to_playlist(&conn, &playlist.id, &["s-1".into(), "s-2".into()])
+            .expect("add");
+
+        let renamed = rename_playlist(&conn, &playlist.id, "新名").expect("rename");
+        assert_eq!(renamed.name, "新名");
+        assert_eq!(renamed.song_ids.len(), 2);
+
+        let updated = remove_song_from_playlist(&conn, &playlist.id, "s-1").expect("remove");
+        assert_eq!(updated.song_ids, vec!["s-2".to_string()]);
+
+        assert!(delete_playlist(&conn, &playlist.id).expect("delete"));
+        let remaining = list_playlists(&conn).expect("list");
+        assert!(!remaining.iter().any(|p| p.id == playlist.id));
+    }
+
+    #[test]
+    fn rejects_operations_on_system_playlists() {
+        let conn = setup();
+        let system_pl = Playlist {
+            id: "sys-1".into(),
+            name: "系统列表".into(),
+            icon: "clock".into(),
+            system: true,
+            song_ids: vec!["s-1".into()],
+        };
+        upsert_playlist(&conn, &system_pl, 0).expect("seed system playlist");
+
+        let result = rename_playlist(&conn, "sys-1", "x");
+        assert!(result.is_err());
+
+        let result = delete_playlist(&conn, "sys-1");
+        assert!(result.is_err());
+
+        let result = remove_song_from_playlist(&conn, "sys-1", "s-1");
+        assert!(result.is_err());
     }
 
     #[test]

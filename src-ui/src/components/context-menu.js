@@ -1,6 +1,6 @@
 import { setState, getState } from '../state.js';
 import { songs as mockSongs } from '../mock-data.js';
-import { addSongsToPlaylist, addToPlaylist, createPlaylist, playSong, playSongList } from '../player-actions.js';
+import { addSongsToPlaylist, addToPlaylist, createPlaylist, deletePlaylist, playSong, playSongList, renamePlaylist, removeSongFromPlaylist } from '../player-actions.js';
 import { showToast } from './toast.js';
 
 const menuItems = [
@@ -78,6 +78,24 @@ export function bind(root) {
         case 'show-in-folder':
           showToast('已模拟打开所在文件夹');
           break;
+        case 'rename-playlist':
+          if (target.type === 'playlist') {
+            const name = window.prompt('重命名播放列表', getState().playlists.find(p => p.id === target.id)?.name || '');
+            if (name?.trim()) await renamePlaylist(target.id, name.trim());
+          }
+          break;
+        case 'delete-playlist':
+          if (target.type === 'playlist') {
+            if (window.confirm(`确定删除「${getState().playlists.find(p => p.id === target.id)?.name || ''}」？`)) {
+              await deletePlaylist(target.id);
+            }
+          }
+          break;
+        case 'remove-from-playlist':
+          if (target.playlistId && target.id) {
+            await removeSongFromPlaylist(target.playlistId, target.id);
+          }
+          break;
       }
     });
   });
@@ -97,5 +115,21 @@ function getMenuItems(target) {
       { icon: 'plus', label: '新建播放列表', action: 'new-playlist' },
     ];
   }
-  return menuItems;
+  if (target?.type === 'playlist') {
+    const items = [
+      { icon: 'pencil', label: '重命名', action: 'rename-playlist' },
+    ];
+    if (!target.system) {
+      items.push({ icon: 'trash-2', label: '删除', action: 'delete-playlist' });
+    }
+    return items;
+  }
+  const items = [...menuItems];
+  if (target?.type === 'song' && target.playlistId) {
+    items.push(
+      { divider: true },
+      { icon: 'x', label: '从播放列表移除', action: 'remove-from-playlist' },
+    );
+  }
+  return items;
 }

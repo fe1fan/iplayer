@@ -1,6 +1,6 @@
 import { getState, setState } from './state.js';
 import { songs } from './mock-data.js';
-import { addSongsToPlaylist as ipcAddSongsToPlaylist, createPlaylist as ipcCreatePlaylist, getPlaylists, toggleLike as ipcToggleLike } from './ipc.js';
+import { addSongsToPlaylist as ipcAddSongsToPlaylist, createPlaylist as ipcCreatePlaylist, deletePlaylist as ipcDeletePlaylist, getPlaylists, removeSongFromPlaylist as ipcRemoveSongFromPlaylist, renamePlaylist as ipcRenamePlaylist, toggleLike as ipcToggleLike } from './ipc.js';
 import { showToast } from './components/toast.js';
 
 function librarySongs(state = getState()) {
@@ -192,6 +192,54 @@ export async function createPlaylist() {
     activePlaylistId: playlist.id,
   });
   showToast('已创建播放列表');
+}
+
+export async function renamePlaylist(playlistId, name) {
+  const s = getState();
+  const playlist = s.playlists.find(p => p.id === playlistId);
+  if (!playlist) return;
+  try {
+    const result = await ipcRenamePlaylist(playlistId, name);
+    if (result?.success) {
+      setState({ playlists: s.playlists.map(p => p.id === playlistId ? { ...p, name } : p) });
+      showToast(`已重命名为「${name}」`);
+    }
+  } catch (error) {
+    console.warn('[ipc] rename_playlist failed', error);
+  }
+}
+
+export async function deletePlaylist(playlistId) {
+  const s = getState();
+  const playlist = s.playlists.find(p => p.id === playlistId);
+  if (!playlist || playlist.system) return;
+  try {
+    const result = await ipcDeletePlaylist(playlistId);
+    if (result?.success) {
+      const playlists = s.playlists.filter(p => p.id !== playlistId);
+      const next = s.sidebarActive === `pl-${playlistId}` ? 'songs' : s.sidebarActive;
+      setState({ playlists, sidebarActive: next });
+      showToast(`已删除「${playlist.name}」`);
+    }
+  } catch (error) {
+    console.warn('[ipc] delete_playlist failed', error);
+  }
+}
+
+export async function removeSongFromPlaylist(playlistId, songId) {
+  const s = getState();
+  try {
+    const result = await ipcRemoveSongFromPlaylist(playlistId, songId);
+    const playlists = s.playlists.map(p => {
+      if (p.id !== playlistId) return p;
+      if (result?.playlist) return result.playlist;
+      return { ...p, songIds: (p.songIds || []).filter(id => id !== songId) };
+    });
+    setState({ playlists });
+    showToast('已从播放列表移除');
+  } catch (error) {
+    console.warn('[ipc] remove_song_from_playlist failed', error);
+  }
 }
 
 function defaultPlaylistId() {

@@ -99,6 +99,15 @@ export function bind(root) {
 
   el.querySelectorAll('[data-playlists-section], [data-playlists-context]').forEach(area => area.addEventListener('contextmenu', e => {
     e.preventDefault();
+    const item = e.target.closest('.sidebar-item[data-nav^="pl-"]');
+    if (item) {
+      const playlistId = item.dataset.nav.slice(3);
+      const pl = getState().playlists.find(p => p.id === playlistId);
+      if (pl) {
+        setState({ contextMenu: { open: true, x: e.clientX, y: e.clientY, target: { type: 'playlist', id: playlistId, system: pl.system } } });
+        return;
+      }
+    }
     setState({ contextMenu: { open: true, x: e.clientX, y: e.clientY, target: { type: 'playlists' } } });
   }));
 

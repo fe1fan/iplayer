@@ -22,12 +22,19 @@ pub fn run() {
             commands::lyrics::get_lyrics,
             commands::playlist::add_songs_to_playlist,
             commands::playlist::create_playlist,
+            commands::playlist::delete_playlist,
             commands::playlist::get_playlists,
+            commands::playlist::remove_song_from_playlist,
+            commands::playlist::rename_playlist,
             commands::playlist::toggle_like,
         ])
         .setup(|app| {
             let state = AppState::initialize(app.handle())?;
             app.manage(state);
+
+            if let Err(e) = library::watcher::LibraryWatcher::start(app.handle()) {
+                log::warn!("file watcher failed to start: {e}");
+            }
 
             if cfg!(debug_assertions) {
                 app.handle().plugin(

@@ -1,6 +1,8 @@
 import { subscribe, setState, getState } from './state.js';
 import { songs, formatDuration, getProgressPercent } from './mock-data.js';
 import { createIcons, icons } from 'lucide';
+import { isTauri } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { getLibrary, getPlaylists, searchSongs } from './ipc.js';
 import { showToast } from './components/toast.js';
 import { hydrateMiniStateIfNeeded, initWindowModeHandlers, shouldRenderMiniMode, syncMiniWindowMode } from './window-mode.js';
@@ -201,3 +203,15 @@ getPlaylists().then(playlists => {
 }).catch(error => {
   console.warn('[ipc] get_playlists failed', error);
 });
+
+if (isTauri()) {
+  getCurrentWindow().listen('library:changed', event => {
+    const data = event.payload;
+    if (!data) return;
+    setState({
+      librarySongs: data.songs || getState().librarySongs,
+      libraryAlbums: data.albums || getState().libraryAlbums,
+    });
+    showToast(`曲库已更新（${data.imported ?? 0} 首新增）`);
+  });
+}

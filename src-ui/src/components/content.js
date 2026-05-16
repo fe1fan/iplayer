@@ -184,7 +184,15 @@ export function bind(root) {
     tr.addEventListener('keydown', e => { if (e.key === 'Enter') playSong(tr.dataset.songId, currentList()); });
     tr.addEventListener('contextmenu', e => {
       e.preventDefault();
-      setState({ contextMenu: { open: true, x: e.clientX, y: e.clientY, target: { type: 'song', id: tr.dataset.songId } } });
+      const s = getState();
+      const target = { type: 'song', id: tr.dataset.songId };
+      if (s.view === 'playlist' && s.activePlaylistId) {
+        const pl = s.playlists.find(p => p.id === s.activePlaylistId);
+        if (pl && !pl.system && pl.songIds?.includes(tr.dataset.songId)) {
+          target.playlistId = s.activePlaylistId;
+        }
+      }
+      setState({ contextMenu: { open: true, x: e.clientX, y: e.clientY, target } });
     });
   });
 

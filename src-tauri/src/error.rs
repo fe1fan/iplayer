@@ -72,4 +72,13 @@ impl From<lofty::error::LoftyError> for AppError {
     }
 }
 
+impl From<notify::Error> for AppError {
+    fn from(error: notify::Error) -> Self {
+        Self {
+            code: "watch_error",
+            message: error.to_string(),
+        }
+    }
+}
+
 pub type CommandResult<T> = Result<T, AppError>;

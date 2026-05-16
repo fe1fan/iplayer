@@ -89,3 +89,21 @@ export async function addSongsToPlaylist(playlistId, songIds) {
     playlist: null,
   }));
 }
+
+export async function renamePlaylist(playlistId, name) {
+  return invokeOrFallback('rename_playlist', { playlistId, name }, () => ({
+    success: true,
+    playlist: { id: playlistId, name, icon: 'list-music', system: false, songIds: [] },
+  }));
+}
+
+export async function deletePlaylist(playlistId) {
+  return invokeOrFallback('delete_playlist', { playlistId }, () => ({ success: true }));
+}
+
+export async function removeSongFromPlaylist(playlistId, songId) {
+  return invokeOrFallback('remove_song_from_playlist', { playlistId, songId }, () => ({
+    success: true,
+    playlist: null,
+  }));
+}

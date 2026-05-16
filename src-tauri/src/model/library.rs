@@ -94,3 +94,23 @@ pub struct AddSongsToPlaylistResponse {
     pub success: bool,
     pub playlist: Playlist,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RenamePlaylistResponse {
+    pub success: bool,
+    pub playlist: Playlist,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeletePlaylistResponse {
+    pub success: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoveSongFromPlaylistResponse {
+    pub success: bool,
+    pub playlist: Playlist,
+}
