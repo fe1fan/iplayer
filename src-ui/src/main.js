@@ -21,12 +21,19 @@ import * as toast from './components/toast.js';
 
 const app = document.querySelector('#app');
 let renderPending = false;
+let renderSuppressed = false;
+
+export function suppressRender(on) {
+  renderSuppressed = on;
+  if (!on) scheduleRender();
+}
 
 function scheduleRender() {
-  if (renderPending) return;
+  if (renderPending || renderSuppressed) return;
   renderPending = true;
   queueMicrotask(() => {
     renderPending = false;
+    if (renderSuppressed) return;
     renderApp();
   });
 }

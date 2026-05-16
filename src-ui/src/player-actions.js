@@ -1,7 +1,7 @@
 import { getState, setState } from './state.js';
 import { songs } from './mock-data.js';
 import { isTauri } from '@tauri-apps/api/core';
-import { addSongsToPlaylist as ipcAddSongsToPlaylist, createPlaylist as ipcCreatePlaylist, deletePlaylist as ipcDeletePlaylist, getPlaylists, ipcPause, ipcPlaySong, ipcResume, ipcSeek, ipcSetLoopMode, ipcSetVolume, ipcSkipTrack, ipcStop, removeSongFromPlaylist as ipcRemoveSongFromPlaylist, renamePlaylist as ipcRenamePlaylist, toggleLike as ipcToggleLike } from './ipc.js';
+import { addSongsToPlaylist as ipcAddSongsToPlaylist, createPlaylist as ipcCreatePlaylist, deletePlaylist as ipcDeletePlaylist, getPlaylists, ipcPause, ipcPlaySong, ipcResume, ipcSetLoopMode, ipcSkipTrack, removeSongFromPlaylist as ipcRemoveSongFromPlaylist, renamePlaylist as ipcRenamePlaylist, toggleLike as ipcToggleLike } from './ipc.js';
 import { showToast } from './components/toast.js';
 
 function librarySongs(state = getState()) {
@@ -104,29 +104,6 @@ export function skipTrack(dir) {
     queueIndex: nextIndex,
     recentIds: [song.id, ...s.recentIds.filter(id => id !== song.id)].slice(0, 20),
   });
-}
-
-export function setProgressByPointer(event, element) {
-  const s = getState();
-  if (!s.playing.song || !element.offsetWidth) return;
-  const pct = Math.max(0, Math.min(1, event.offsetX / element.offsetWidth));
-  const progress = Math.round(pct * s.playing.duration);
-  setState({ playing: { ...s.playing, progress } });
-
-  if (isTauri()) {
-    ipcSeek(progress).catch(err => console.warn('[ipc] seek failed', err));
-  }
-}
-
-export function setVolumeByPointer(event, element) {
-  if (!element.offsetWidth) return;
-  const pct = Math.max(0, Math.min(1, event.offsetX / element.offsetWidth));
-  setState({ volume: pct });
-  if (isTauri()) {
-    ipcSetVolume(pct).catch(err => console.warn('[ipc] set_volume failed', err));
-  } else {
-    showToast(`音量 ${Math.round(pct * 100)}%`);
-  }
 }
 
 export async function toggleLike(songId = getState().playing.song?.id) {

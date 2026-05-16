@@ -171,8 +171,8 @@ export function bind(root) {
           // Collapse
           finish(true, COLLAPSED_W);
         } else if (finalW < MIN_EXPAND) {
-          // Too narrow — bounce back to saved width
-          finish(false, getState().sidebarWidth || 200);
+          // Below minimum but above collapsed dead-zone — snap to MIN_EXPAND
+          finish(false, MIN_EXPAND);
         } else {
           // Accept new width
           finish(false, finalW);

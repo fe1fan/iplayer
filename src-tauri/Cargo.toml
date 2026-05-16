@@ -26,6 +26,7 @@ log = "0.4"
 
 # Audio engine
 rodio = { version = "0.20", features = ["symphonia-all"] }
+symphonia = { version = "0.5", features = ["all"] }
 
 # Metadata
 lofty = "0.22"

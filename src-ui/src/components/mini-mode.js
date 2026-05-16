@@ -1,6 +1,9 @@
 import { setState, getState } from '../state.js';
 import { formatDuration, getProgressPercent } from '../mock-data.js';
-import { setProgressByPointer, setVolumeByPointer, skipTrack, toggleLike, togglePlay } from '../player-actions.js';
+import { skipTrack, toggleLike, togglePlay } from '../player-actions.js';
+import { ipcSeek, ipcSetVolume } from '../ipc.js';
+import { isTauri } from '@tauri-apps/api/core';
+import { attachSlider } from './slider.js';
 
 function coverSvg(cls) {
   const fill = cls === 'cover-a' ? '#DBEAFE' : '#DCFCE7';
@@ -79,12 +82,25 @@ export function bind(root) {
   el.querySelector('[data-action="next"]')?.addEventListener('click', () => skipTrack(1));
   el.querySelector('[data-action="lyrics"]')?.addEventListener('click', () => setState({ mini: false, lyrics: true, expanded: false }));
 
-  el.querySelector('#miniProgress')?.addEventListener('click', function(e) {
-    setProgressByPointer(e, this);
+  const progress = el.querySelector('#miniProgress');
+  const progressFill = progress?.querySelector('[data-progress-fill]');
+  attachSlider(progress, progressFill, {
+    onCommit(pct) {
+      const s = getState();
+      if (!s.playing.song || !s.playing.duration) return;
+      const pos = Math.round(pct * s.playing.duration);
+      setState({ playing: { ...s.playing, progress: pos } });
+      if (isTauri()) ipcSeek(pos).catch(err => console.warn('[ipc] seek failed', err));
+    },
   });
 
-  el.querySelector('#miniVolTrack')?.addEventListener('click', function(e) {
-    setVolumeByPointer(e, this);
+  const vol = el.querySelector('#miniVolTrack');
+  const volFill = vol?.querySelector('.fill');
+  attachSlider(vol, volFill, {
+    onCommit(pct) {
+      setState({ volume: pct });
+      if (isTauri()) ipcSetVolume(pct).catch(err => console.warn('[ipc] set_volume failed', err));
+    },
   });
 
   el.querySelector('[data-action="like"]')?.addEventListener('click', () => {

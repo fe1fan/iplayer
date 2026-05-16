@@ -1,6 +1,9 @@
 import { setState, getState } from '../state.js';
 import { formatDuration, getProgressPercent } from '../mock-data.js';
-import { cycleLoopMode, setProgressByPointer, skipTrack, togglePlay, toggleShuffle } from '../player-actions.js';
+import { cycleLoopMode, skipTrack, togglePlay, toggleShuffle } from '../player-actions.js';
+import { ipcSeek } from '../ipc.js';
+import { isTauri } from '@tauri-apps/api/core';
+import { attachSlider } from './slider.js';
 
 function coverSvg(cls, size) {
   const fill = cls === 'cover-a' ? '#DBEAFE' : '#DCFCE7';
@@ -61,7 +64,22 @@ export function bind(root) {
   el.querySelector('[data-action="shuffle"]')?.addEventListener('click', () => toggleShuffle());
   el.querySelector('[data-action="repeat"]')?.addEventListener('click', () => cycleLoopMode());
 
-  el.querySelector('#expProgressTrack')?.addEventListener('click', function(e) {
-    setProgressByPointer(e, this);
+  const track = el.querySelector('#expProgressTrack');
+  const fill = track?.querySelector('.fill');
+  attachSlider(track, fill, {
+    onPreview(pct) {
+      const s = getState();
+      const cur = el.querySelector('[data-current-time]');
+      if (cur) cur.textContent = formatDuration(Math.round(pct * (s.playing.duration || 0)));
+    },
+    onCommit(pct) {
+      const s = getState();
+      if (!s.playing.song || !s.playing.duration) return;
+      const progress = Math.round(pct * s.playing.duration);
+      setState({ playing: { ...s.playing, progress } });
+      if (isTauri()) {
+        ipcSeek(progress).catch(err => console.warn('[ipc] seek failed', err));
+      }
+    },
   });
 }

@@ -1,6 +1,9 @@
 import { setState, getState } from '../state.js';
 import { lyricsData, getProgressPercent, formatDuration } from '../mock-data.js';
-import { getQueueSongs, playSong, setProgressByPointer, skipTrack, togglePlay } from '../player-actions.js';
+import { getQueueSongs, playSong, skipTrack, togglePlay } from '../player-actions.js';
+import { ipcSeek } from '../ipc.js';
+import { isTauri } from '@tauri-apps/api/core';
+import { attachSlider } from './slider.js';
 import { showToast } from './toast.js';
 
 function coverSvg(cls) {
@@ -111,8 +114,16 @@ export function bind(root) {
   el.querySelector('[data-action="prev"]')?.addEventListener('click', () => skipTrack(-1));
   el.querySelector('[data-action="next"]')?.addEventListener('click', () => skipTrack(1));
 
-  el.querySelector('#lyricsProg')?.addEventListener('click', function(e) {
-    setProgressByPointer(e, this);
+  const lyricsProg = el.querySelector('#lyricsProg');
+  const lyricsFill = lyricsProg?.querySelector('[data-progress-fill]');
+  attachSlider(lyricsProg, lyricsFill, {
+    onCommit(pct) {
+      const s = getState();
+      if (!s.playing.song || !s.playing.duration) return;
+      const pos = Math.round(pct * s.playing.duration);
+      setState({ playing: { ...s.playing, progress: pos } });
+      if (isTauri()) ipcSeek(pos).catch(err => console.warn('[ipc] seek failed', err));
+    },
   });
 
   el.querySelectorAll('.queue-row[data-song-id]').forEach(row => {
