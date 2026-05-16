@@ -1,6 +1,6 @@
 import { setState, getState } from '../state.js';
 import { songs } from '../mock-data.js';
-import { addSongsToPlaylist, addToPlaylist, playSong, playSongList } from '../player-actions.js';
+import { addSongsToPlaylist, addToPlaylist, createPlaylist, playSong, playSongList } from '../player-actions.js';
 import { showToast } from './toast.js';
 
 const menuItems = [
@@ -14,11 +14,12 @@ const menuItems = [
 
 export function render() {
   const s = getState();
+  const items = getMenuItems(s.contextMenu.target);
 
   return `
   <div class="ctx-menu${s.contextMenu.open ? ' open' : ''}" id="ctxMenu" role="menu"
        style="left:${s.contextMenu.x}px;top:${s.contextMenu.y}px">
-    ${menuItems.map(item => {
+    ${items.map(item => {
       if (item.divider) return '<div class="ctx-divider"></div>';
       return `<button role="menuitem" data-action="${item.action}"><i data-lucide="${item.icon}"></i> ${item.label}</button>`;
     }).join('')}
@@ -39,6 +40,9 @@ export function bind(root) {
       if (!target) return;
 
       switch (action) {
+        case 'new-playlist':
+          createPlaylist();
+          break;
         case 'play':
           if (target.type === 'song') {
             playSong(target.id, songs);
@@ -80,4 +84,13 @@ export function bind(root) {
 
 function hide() {
   setState({ contextMenu: { open: false, x: 0, y: 0, target: null } });
+}
+
+function getMenuItems(target) {
+  if (target?.type === 'playlists') {
+    return [
+      { icon: 'plus', label: '新建播放列表', action: 'new-playlist' },
+    ];
+  }
+  return menuItems;
 }

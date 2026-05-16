@@ -1,5 +1,4 @@
 import { setState, getState } from '../state.js';
-import { createPlaylist } from '../player-actions.js';
 
 const COLLAPSED_W = 44;
 const DEFAULT_W = 176;
@@ -63,15 +62,11 @@ export function render() {
         </div>
       `).join('')}
     </div>
-    <div class="sidebar-section">
+    <div class="sidebar-section" data-playlists-section>
       <div class="sidebar-section-title">播放列表</div>
       ${plItems}
     </div>
-    <div class="sidebar-footer">
-      <button class="new-pl-btn" aria-label="新建播放列表">
-        <i data-lucide="plus"></i> 新建播放列表
-      </button>
-    </div>
+    <div class="sidebar-footer" aria-hidden="true" data-playlists-context></div>
     <div class="sidebar-resizer" id="sidebarResizer"></div>
   </aside>`;
 }
@@ -102,7 +97,10 @@ export function bind(root) {
     item.addEventListener('keydown', e => { if (e.key === 'Enter') item.click(); });
   });
 
-  el.querySelector('.new-pl-btn')?.addEventListener('click', () => createPlaylist());
+  el.querySelectorAll('[data-playlists-section], [data-playlists-context]').forEach(area => area.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    setState({ contextMenu: { open: true, x: e.clientX, y: e.clientY, target: { type: 'playlists' } } });
+  }));
 
   const resizer = el.querySelector('#sidebarResizer');
   if (resizer) {
