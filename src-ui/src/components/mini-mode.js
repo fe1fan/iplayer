@@ -28,7 +28,7 @@ export function render() {
   <div class="mini-mode${openCls}" id="miniMode" role="region" aria-label="迷你播放器" data-tauri-drag-region>
     <div class="mini-main">
       <button class="mini-cover ${song.coverClass}" data-action="restore" aria-label="打开播放视图">
-        ${coverSvg(song.coverClass)}
+        ${song.coverUrl ? `<img src="${song.coverUrl}" style="width:100%;height:100%;object-fit:cover;">` : coverSvg(song.coverClass)}
       </button>
       <div class="mini-info" data-tauri-drag-region>
         <div class="title">${song.title}</div>

@@ -81,4 +81,13 @@ impl From<notify::Error> for AppError {
     }
 }
 
+impl From<reqwest::Error> for AppError {
+    fn from(error: reqwest::Error) -> Self {
+        Self {
+            code: "network_error",
+            message: error.to_string(),
+        }
+    }
+}
+
 pub type CommandResult<T> = Result<T, AppError>;

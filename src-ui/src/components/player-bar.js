@@ -29,7 +29,7 @@ export function render() {
   <div class="np-bar" id="npBar" role="region" aria-label="当前播放">
     <div class="np-info">
       <div class="np-cover ${song?.coverClass || 'cover-a'}" id="npCover" role="button" tabindex="0" aria-label="展开播放视图">
-        ${song ? coverSvg(song.coverClass) : coverSvg('cover-a')}
+        ${song?.coverUrl ? `<img src="${song.coverUrl}" style="width:100%;height:100%;object-fit:cover;">` : (song ? coverSvg(song.coverClass) : coverSvg('cover-a'))}
       </div>
       <div class="np-text">
         <div class="title" id="npTitle" role="button" tabindex="0">${song?.title || '未在播放'}</div>

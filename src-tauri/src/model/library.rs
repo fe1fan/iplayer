@@ -15,6 +15,7 @@ pub struct Song {
     pub track: String,
     pub file_path: Option<String>,
     pub folder_id: Option<String>,
+    pub cover_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,6 +66,7 @@ pub struct MetadataPatch {
     pub album: Option<String>,
     pub year: Option<i32>,
     pub track: Option<String>,
+    pub cover_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

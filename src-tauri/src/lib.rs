@@ -19,6 +19,7 @@ pub fn run() {
             commands::library::scan_library,
             commands::library::search_songs,
             commands::metadata::get_song_metadata,
+            commands::metadata::match_musicbrainz,
             commands::metadata::update_metadata,
             commands::lyrics::get_lyrics,
             commands::playlist::add_songs_to_playlist,

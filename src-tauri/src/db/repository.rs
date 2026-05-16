@@ -77,7 +77,7 @@ pub fn import_scanned_songs(
 pub fn list_songs(conn: &Connection) -> CommandResult<Vec<Song>> {
     let mut stmt = conn.prepare(
         "
-        SELECT id, title, artist, album, album_id, duration, format, cover_class, year, track, file_path, folder_id
+        SELECT id, title, artist, album, album_id, duration, format, cover_class, year, track, file_path, folder_id, cover_url
         FROM songs
         ORDER BY title COLLATE NOCASE
         ",
@@ -117,7 +117,7 @@ pub fn search_songs(conn: &Connection, query: &str) -> CommandResult<Vec<Song>> 
     let pattern = format!("%{}%", query.to_lowercase());
     let mut stmt = conn.prepare(
         "
-        SELECT id, title, artist, album, album_id, duration, format, cover_class, year, track, file_path, folder_id
+        SELECT id, title, artist, album, album_id, duration, format, cover_class, year, track, file_path, folder_id, cover_url
         FROM songs
         WHERE lower(title) LIKE ?1 OR lower(artist) LIKE ?1 OR lower(album) LIKE ?1
         ORDER BY title COLLATE NOCASE
@@ -130,7 +130,7 @@ pub fn search_songs(conn: &Connection, query: &str) -> CommandResult<Vec<Song>> 
 pub fn get_song(conn: &Connection, song_id: &str) -> CommandResult<Option<Song>> {
     conn.query_row(
         "
-        SELECT id, title, artist, album, album_id, duration, format, cover_class, year, track, file_path, folder_id
+        SELECT id, title, artist, album, album_id, duration, format, cover_class, year, track, file_path, folder_id, cover_url
         FROM songs
         WHERE id = ?1
         ",
@@ -163,14 +163,17 @@ pub fn update_song_metadata(
     if let Some(track) = patch.track {
         song.track = track;
     }
+    if let Some(cover_url) = patch.cover_url {
+        song.cover_url = Some(cover_url);
+    }
 
     conn.execute(
         "
         UPDATE songs
-        SET title = ?2, artist = ?3, album = ?4, year = ?5, track = ?6, updated_at = CURRENT_TIMESTAMP
+        SET title = ?2, artist = ?3, album = ?4, year = ?5, track = ?6, cover_url = ?7, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?1
         ",
-        params![song.id, song.title, song.artist, song.album, song.year, song.track],
+        params![song.id, song.title, song.artist, song.album, song.year, song.track, song.cover_url],
     )?;
 
     rebuild_library_facets(conn)?;
@@ -431,8 +434,8 @@ fn upsert_song(conn: &Connection, song: &Song) -> CommandResult<()> {
 
     conn.execute(
         "
-        INSERT INTO songs (id, file_path, folder_id, title, artist, album, album_id, duration, format, cover_class, year, track)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
+        INSERT INTO songs (id, file_path, folder_id, title, artist, album, album_id, duration, format, cover_class, year, track, cover_url)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
         ON CONFLICT(id) DO UPDATE SET
           file_path = excluded.file_path,
           title = excluded.title,
@@ -445,6 +448,7 @@ fn upsert_song(conn: &Connection, song: &Song) -> CommandResult<()> {
           year = excluded.year,
           track = excluded.track,
           folder_id = excluded.folder_id,
+          cover_url = excluded.cover_url,
           updated_at = CURRENT_TIMESTAMP
         ",
         params![
@@ -459,7 +463,8 @@ fn upsert_song(conn: &Connection, song: &Song) -> CommandResult<()> {
             song.format,
             song.cover_class,
             song.year,
-            song.track
+            song.track,
+            song.cover_url
         ],
     )?;
     Ok(())
@@ -481,6 +486,7 @@ fn update_song_row(conn: &Connection, song_id: &str, song: &Song) -> CommandResu
           cover_class = ?10,
           year = ?11,
           track = ?12,
+          cover_url = ?13,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?1
         ",
@@ -496,7 +502,8 @@ fn update_song_row(conn: &Connection, song_id: &str, song: &Song) -> CommandResu
             song.format,
             song.cover_class,
             song.year,
-            song.track
+            song.track,
+            song.cover_url
         ],
     )?;
     Ok(())
@@ -638,6 +645,7 @@ fn map_song(row: &rusqlite::Row<'_>) -> rusqlite::Result<Song> {
         track: row.get(9)?,
         file_path: row.get(10)?,
         folder_id: row.get(11)?,
+        cover_url: row.get(12)?,
     })
 }
 
@@ -688,6 +696,7 @@ mod tests {
                 album: None,
                 year: Some(1976),
                 track: None,
+                cover_url: None,
             },
         )
         .expect("update");
@@ -771,6 +780,7 @@ mod tests {
             id: "song-scan-1".into(),
             file_path: Some("/tmp/music/new-track.flac".into()),
             folder_id: None,
+            cover_url: None,
             title: "New Track".into(),
             artist: "New Artist".into(),
             album: "New Album".into(),
@@ -818,6 +828,7 @@ mod tests {
                     id: "s-1".into(),
                     file_path: None,
                     folder_id: None,
+            cover_url: None,
                     title: "Bohemian Rhapsody".into(),
                     artist: "Queen".into(),
                     album: "A Night at the Opera".into(),
@@ -832,6 +843,7 @@ mod tests {
                     id: "s-2".into(),
                     file_path: None,
                     folder_id: None,
+            cover_url: None,
                     title: "Love of My Life".into(),
                     artist: "Queen".into(),
                     album: "A Night at the Opera".into(),

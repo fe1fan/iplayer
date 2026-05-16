@@ -123,6 +123,7 @@ fn read_song(path: &Path, folder_id: &str) -> CommandResult<Song> {
         track,
         file_path: Some(path_str),
         folder_id: Some(folder_id.to_string()),
+        cover_url: None,
     })
 }
 

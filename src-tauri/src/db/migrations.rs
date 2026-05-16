@@ -131,6 +131,7 @@ pub fn run(conn: &Connection) -> CommandResult<()> {
 
     ensure_column(conn, "songs", "file_path", "TEXT")?;
     ensure_column(conn, "songs", "folder_id", "TEXT")?;
+    ensure_column(conn, "songs", "cover_url", "TEXT")?;
 
     Ok(())
 }

@@ -298,6 +298,7 @@ fn song(
         id: id.into(),
         file_path: None,
         folder_id: None,
+        cover_url: None,
         title: title.into(),
         artist: artist.into(),
         album: album.into(),

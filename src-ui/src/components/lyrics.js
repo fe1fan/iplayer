@@ -63,7 +63,9 @@ export function render() {
   <div class="overlay lyrics-view${openCls}" id="lyricsView" role="dialog" aria-label="歌词" aria-modal="true">
     <div class="lyrics-header">
       <div class="track-info">
-        <div class="thumb ${song.coverClass}">${coverSvg(song.coverClass)}</div>
+        <div class="thumb ${song.coverClass}">
+          ${song.coverUrl ? `<img src="${song.coverUrl}" style="width:100%;height:100%;object-fit:cover;">` : coverSvg(song.coverClass)}
+        </div>
         <div class="meta">
           <div class="name">${song.title}</div>
           <div class="artist">${song.artist}</div>

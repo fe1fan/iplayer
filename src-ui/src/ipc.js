@@ -51,6 +51,17 @@ export async function getSongMetadata(songId) {
   return invokeOrFallback('get_song_metadata', { songId }, () => songs.find(s => s.id === songId) || null);
 }
 
+export async function matchMusicBrainz(title, artist, album) {
+  return invokeOrFallback('match_musicbrainz', { title, artist, album }, () => ({
+    title: title || 'Mock Title',
+    artist: artist || 'Mock Artist',
+    album: album || 'Mock Album',
+    year: 2024,
+    track: '1',
+    coverUrl: null
+  }));
+}
+
 export async function updateMetadata(songId, data) {
   return invokeOrFallback('update_metadata', { songId, data }, () => {
     const song = songs.find(s => s.id === songId) || null;

@@ -1,6 +1,6 @@
 import { setState, getState } from '../state.js';
 import { songs as mockSongs } from '../mock-data.js';
-import { updateMetadata } from '../ipc.js';
+import { updateMetadata, matchMusicBrainz } from '../ipc.js';
 import { showToast } from './toast.js';
 
 function coverSvg(cls) {
@@ -55,7 +55,7 @@ export function render() {
         <div class="format-info">${song.format || 'Unknown'}</div>
       </div>
       <button class="auto-match" data-action="auto-match" aria-label="从 MusicBrainz 自动匹配">
-        <i data-lucide="database"></i> 从 MusicBrainz 自动匹配
+        <i data-lucide="database"></i> <span>从 MusicBrainz 自动匹配</span>
       </button>
     </div>
     <div class="panel-footer">
@@ -73,16 +73,73 @@ export function bind(root) {
   el.querySelector('[data-action="cancel"]')?.addEventListener('click', () => closePanel());
   el.querySelector('[data-action="cover-search"]')?.addEventListener('click', () => showToast('已模拟匹配 3 张候选封面'));
   el.querySelector('[data-action="cover-upload"]')?.addEventListener('click', () => showToast('本地封面上传入口已就绪'));
-  el.querySelector('[data-action="auto-match"]')?.addEventListener('click', () => {
+  
+  el.querySelector('[data-action="auto-match"]')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const span = btn.querySelector('span');
     const song = getState().metadata.song;
     if (!song) return;
-    el.querySelector('#metaTitle').value = song.title.trim();
-    el.querySelector('#metaArtist').value = song.artist.trim();
-    el.querySelector('#metaAlbum').value = song.album.trim();
-    el.querySelector('#metaYear').value = song.year || '';
-    el.querySelector('#metaTrack').value = song.track || '';
-    showToast('已填入模拟匹配结果');
+    
+    // Use current input values or fallback to original song info
+    const queryTitle = el.querySelector('#metaTitle').value.trim() || song.title;
+    const queryArtist = el.querySelector('#metaArtist').value.trim() || song.artist;
+    const queryAlbum = el.querySelector('#metaAlbum').value.trim() || song.album;
+    
+    btn.disabled = true;
+    const originalText = span.textContent;
+    span.textContent = '匹配中...';
+    
+    try {
+      const match = await matchMusicBrainz(queryTitle, queryArtist, queryAlbum);
+      if (match) {
+        if (match.title) el.querySelector('#metaTitle').value = match.title;
+        if (match.artist) el.querySelector('#metaArtist').value = match.artist;
+        if (match.album) el.querySelector('#metaAlbum').value = match.album;
+        if (match.year) el.querySelector('#metaYear').value = match.year;
+        if (match.track) el.querySelector('#metaTrack').value = match.track;
+        if (match.coverUrl) {
+          const coverEdit = el.querySelector('.cover-edit');
+          let img = coverEdit.querySelector('img.matched-cover');
+          if (!img) {
+            img = document.createElement('img');
+            img.className = 'matched-cover';
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+            img.style.position = 'absolute';
+            img.style.top = '0';
+            img.style.left = '0';
+            
+            img.onerror = () => {
+              img.style.display = 'none';
+              const svg = coverEdit.querySelector('svg');
+              if (svg) svg.style.display = 'block';
+              showToast('该专辑暂无封面', 'warning');
+            };
+            
+            coverEdit.insertBefore(img, coverEdit.firstChild);
+          }
+          
+          img.style.display = 'block';
+          img.src = match.coverUrl;
+          
+          img.onload = () => {
+            const svg = coverEdit.querySelector('svg');
+            if (svg) svg.style.display = 'none';
+          };
+        }
+        showToast('已填入 MusicBrainz 匹配结果', 'success');
+      } else {
+        showToast('未找到匹配记录', 'error');
+      }
+    } catch (error) {
+      showToast('匹配失败: ' + error, 'error');
+    } finally {
+      btn.disabled = false;
+      span.textContent = originalText;
+    }
   });
+
   el.querySelector('[data-action="apply"]')?.addEventListener('click', async () => {
     const s = getState();
     const song = s.metadata.song;
@@ -94,6 +151,12 @@ export function bind(root) {
         year: Number(el.querySelector('#metaYear')?.value) || song.year,
         track: el.querySelector('#metaTrack')?.value.trim() || song.track,
       };
+      
+      const matchedCover = el.querySelector('img.matched-cover');
+      if (matchedCover && matchedCover.src && matchedCover.style.display !== 'none') {
+        patch.coverUrl = matchedCover.src;
+      }
+      
       let next = { ...song, ...patch };
       try {
         const result = await updateMetadata(song.id, patch);
