@@ -419,3 +419,11 @@ body.mini-window .mini-vol-track{width:32px}
 .toggle-switch .slider:before{position:absolute;content:"";height:14px;width:14px;left:2px;bottom:2px;background-color:var(--text-2);transition:.3s;border-radius:50%}
 .toggle-switch input:checked + .slider{background-color:var(--accent);border-color:var(--accent)}
 .toggle-switch input:checked + .slider:before{transform:translateX(16px);background-color:#fff}
+
+/* ── Sidebar Layout Optimization ── */
+.sidebar { display: flex; flex-direction: column; height: 100%; }
+.sidebar-main-scroll { flex: 1; overflow-y: auto; min-height: 0; }
+.sidebar-main-scroll::-webkit-scrollbar { width: 4px; }
+.sidebar-main-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; }
+.sidebar-main-scroll:hover::-webkit-scrollbar-thumb { background: var(--border); }
+.sidebar-system-footer { border-top: 1px solid var(--border); padding-top: 4px; padding-bottom: 4px; margin-top: auto; }

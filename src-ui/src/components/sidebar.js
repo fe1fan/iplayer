@@ -42,6 +42,8 @@ export function render() {
     { key: 'albums', icon: 'disc-3', label: '专辑' },
     { key: 'artists', icon: 'mic-2', label: '艺术家' },
     { key: 'folders', icon: 'folder', label: '文件夹' },
+  ];
+  const systemItems = [
     { key: 'plugins', icon: 'plug', label: '插件' },
     { key: 'settings', icon: 'settings', label: '设置' },
   ];
@@ -55,17 +57,26 @@ export function render() {
 
   return `
   <aside class="sidebar${collapsed ? ' collapsed' : ''}" role="navigation" aria-label="Main navigation">
-    <div class="sidebar-section">
-      <div class="sidebar-section-title">资料库</div>
-      ${navItems.map(n => `
+    <div class="sidebar-main-scroll">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">资料库</div>
+        ${navItems.map(n => `
+          <div class="sidebar-item${s.sidebarActive === n.key ? ' active' : ''}" role="button" tabindex="0" data-nav="${n.key}" aria-label="${n.label}" title="${n.label}">
+            <i data-lucide="${n.icon}"></i><span class="sidebar-label">${n.label}</span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="sidebar-section" data-playlists-section>
+        <div class="sidebar-section-title">播放列表</div>
+        ${plItems}
+      </div>
+    </div>
+    <div class="sidebar-system-footer">
+      ${systemItems.map(n => `
         <div class="sidebar-item${s.sidebarActive === n.key ? ' active' : ''}" role="button" tabindex="0" data-nav="${n.key}" aria-label="${n.label}" title="${n.label}">
           <i data-lucide="${n.icon}"></i><span class="sidebar-label">${n.label}</span>
         </div>
       `).join('')}
-    </div>
-    <div class="sidebar-section" data-playlists-section>
-      <div class="sidebar-section-title">播放列表</div>
-      ${plItems}
     </div>
     <div class="sidebar-footer" aria-hidden="true" data-playlists-context></div>
     <div class="sidebar-resizer" id="sidebarResizer"></div>
