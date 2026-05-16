@@ -1,7 +1,7 @@
 import { subscribe, setState, getState } from './state.js';
 import { songs, formatDuration, getProgressPercent } from './mock-data.js';
 import { createIcons, icons } from 'lucide';
-import { searchSongs } from './ipc.js';
+import { getLibrary, getPlaylists, searchSongs } from './ipc.js';
 import { showToast } from './components/toast.js';
 import { hydrateMiniStateIfNeeded, initWindowModeHandlers, shouldRenderMiniMode, syncMiniWindowMode } from './window-mode.js';
 import { skipTrack } from './player-actions.js';
@@ -75,6 +75,8 @@ subscribe('activePlaylistId', scheduleRender);
 subscribe('selectedAlbumId', scheduleRender);
 subscribe('selectedArtist', scheduleRender);
 subscribe('selectedFolder', scheduleRender);
+subscribe('librarySongs', scheduleRender);
+subscribe('libraryAlbums', scheduleRender);
 subscribe('shuffle', scheduleRender);
 subscribe('loopMode', scheduleRender);
 subscribe('lyricsPanel', scheduleRender);
@@ -166,3 +168,36 @@ if (!hydrateMiniStateIfNeeded()) {
 }
 
 renderApp();
+
+getLibrary().then(library => {
+  if (!library?.songs?.length) return;
+  const updates = {
+    librarySongs: library.songs,
+    libraryAlbums: library.albums || [],
+  };
+  const current = getState().playing.song;
+  if (!current || !library.songs.some(song => song.id === current.id)) {
+    updates.playing = {
+      song: library.songs[0],
+      isPlaying: false,
+      progress: 0,
+      duration: library.songs[0].duration,
+    };
+    updates.queue = library.songs.map(song => song.id);
+    updates.queueIndex = 0;
+  }
+  setState(updates);
+}).catch(error => {
+  console.warn('[ipc] get_library failed', error);
+});
+
+getPlaylists().then(playlists => {
+  if (!playlists?.length) return;
+  const likedPlaylist = playlists.find(playlist => playlist.id === 'liked');
+  setState({
+    playlists,
+    likedIds: new Set(likedPlaylist?.songIds || []),
+  });
+}).catch(error => {
+  console.warn('[ipc] get_playlists failed', error);
+});

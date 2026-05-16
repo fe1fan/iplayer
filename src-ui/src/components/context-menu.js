@@ -1,5 +1,5 @@
 import { setState, getState } from '../state.js';
-import { songs } from '../mock-data.js';
+import { songs as mockSongs } from '../mock-data.js';
 import { addSongsToPlaylist, addToPlaylist, createPlaylist, playSong, playSongList } from '../player-actions.js';
 import { showToast } from './toast.js';
 
@@ -31,9 +31,10 @@ export function bind(root) {
   if (!el) return;
 
   el.querySelectorAll('button[data-action]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const action = btn.dataset.action;
       const s = getState();
+      const songs = getSongs();
       const target = s.contextMenu.target;
       hide();
 
@@ -41,7 +42,7 @@ export function bind(root) {
 
       switch (action) {
         case 'new-playlist':
-          createPlaylist();
+          await createPlaylist();
           break;
         case 'play':
           if (target.type === 'song') {
@@ -52,9 +53,9 @@ export function bind(root) {
           }
           break;
         case 'add-to-list':
-          if (target.type === 'song') addToPlaylist(target.id);
+          if (target.type === 'song') await addToPlaylist(target.id);
           else if (target.type === 'album') {
-            addSongsToPlaylist(songs.filter(song => song.albumId === target.id).map(song => song.id));
+            await addSongsToPlaylist(songs.filter(song => song.albumId === target.id).map(song => song.id));
           }
           break;
         case 'view-album':
@@ -80,6 +81,10 @@ export function bind(root) {
       }
     });
   });
+}
+
+function getSongs() {
+  return getState().librarySongs || mockSongs;
 }
 
 function hide() {

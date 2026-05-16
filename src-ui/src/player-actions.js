@@ -1,21 +1,28 @@
 import { getState, setState } from './state.js';
 import { songs } from './mock-data.js';
+import { addSongsToPlaylist as ipcAddSongsToPlaylist, createPlaylist as ipcCreatePlaylist, getPlaylists, toggleLike as ipcToggleLike } from './ipc.js';
 import { showToast } from './components/toast.js';
 
+function librarySongs(state = getState()) {
+  return state.librarySongs || songs;
+}
+
 export function getSongById(songId) {
-  return songs.find(song => song.id === songId) || null;
+  return librarySongs().find(song => song.id === songId) || null;
 }
 
 export function getQueueSongs(state = getState()) {
-  const queue = state.queue?.length ? state.queue : songs.map(song => song.id);
+  const allSongs = librarySongs(state);
+  const queue = state.queue?.length ? state.queue : allSongs.map(song => song.id);
   return queue.map(getSongById).filter(Boolean);
 }
 
-export function playSong(songId, queueSongs = songs) {
+export function playSong(songId, queueSongs = librarySongs()) {
   const song = getSongById(songId);
   if (!song) return;
 
-  const queue = queueSongs.length ? queueSongs.map(item => item.id) : songs.map(item => item.id);
+  const allSongs = librarySongs();
+  const queue = queueSongs.length ? queueSongs.map(item => item.id) : allSongs.map(item => item.id);
   const queueIndex = Math.max(0, queue.indexOf(song.id));
   const recentIds = [song.id, ...getState().recentIds.filter(id => id !== song.id)].slice(0, 20);
 
@@ -35,7 +42,8 @@ export function playSongList(queueSongs, startSongId = queueSongs[0]?.id) {
 export function togglePlay() {
   const s = getState();
   if (!s.playing.song) {
-    playSong(songs[0]?.id, songs);
+    const allSongs = librarySongs(s);
+    playSong(allSongs[0]?.id, allSongs);
     return;
   }
   setState({ playing: { ...s.playing, isPlaying: !s.playing.isPlaying } });
@@ -86,14 +94,27 @@ export function setVolumeByPointer(event, element) {
   showToast(`音量 ${Math.round(pct * 100)}%`);
 }
 
-export function toggleLike(songId = getState().playing.song?.id) {
+export async function toggleLike(songId = getState().playing.song?.id) {
   if (!songId) return;
   const s = getState();
-  const likedIds = new Set(s.likedIds);
-  const liked = !likedIds.has(songId);
+  let liked = !s.likedIds.has(songId);
+  try {
+    const result = await ipcToggleLike(songId);
+    if (typeof result?.liked === 'boolean') liked = result.liked;
+  } catch (error) {
+    console.warn('[ipc] toggle_like failed', error);
+  }
+  const likedIds = new Set(getState().likedIds);
   if (liked) likedIds.add(songId);
   else likedIds.delete(songId);
-  setState({ likedIds });
+  const playlists = getState().playlists.map(playlist => {
+    if (playlist.id !== 'liked') return playlist;
+    const songIds = liked
+      ? Array.from(new Set([...(playlist.songIds || []), songId]))
+      : (playlist.songIds || []).filter(id => id !== songId);
+    return { ...playlist, songIds };
+  });
+  setState({ likedIds, playlists });
   showToast(liked ? '已添加到收藏' : '已从收藏移除');
 }
 
@@ -110,37 +131,69 @@ export function cycleLoopMode() {
   showToast(loopMode === 'one' ? '单曲循环' : loopMode === 'off' ? '循环已关闭' : '列表循环');
 }
 
-export function addToPlaylist(songId, playlistId = 'pl-1') {
-  addSongsToPlaylist([songId], playlistId);
+export async function addToPlaylist(songId, playlistId = defaultPlaylistId()) {
+  await addSongsToPlaylist([songId], playlistId);
 }
 
-export function addSongsToPlaylist(songIds, playlistId = 'pl-1') {
+export async function addSongsToPlaylist(songIds, playlistId = defaultPlaylistId()) {
+  if (!playlistId || !songIds.length) return;
   const s = getState();
-  const playlists = s.playlists.map(playlist => {
+  let nextPlaylist = null;
+  try {
+    const result = await ipcAddSongsToPlaylist(playlistId, songIds);
+    nextPlaylist = result?.playlist || null;
+  } catch (error) {
+    console.warn('[ipc] add_songs_to_playlist failed', error);
+  }
+  const playlists = getState().playlists.map(playlist => {
     if (playlist.id !== playlistId) return playlist;
-    const nextIds = Array.from(new Set([...(playlist.songIds || []), ...songIds]));
-    return { ...playlist, songIds: nextIds };
+    if (nextPlaylist) return nextPlaylist;
+    return { ...playlist, songIds: Array.from(new Set([...(playlist.songIds || []), ...songIds])) };
   });
   const playlist = playlists.find(item => item.id === playlistId);
   setState({ playlists });
   showToast(`已添加到 ${playlist?.name || '播放列表'}`);
 }
 
-export function createPlaylist() {
+export async function createPlaylist() {
   const s = getState();
   const index = s.playlists.filter(item => !item.system).length + 1;
-  const playlist = {
+  let playlist;
+  try {
+    const result = await ipcCreatePlaylist(`新播放列表 ${index}`);
+    playlist = result?.playlist;
+  } catch (error) {
+    console.warn('[ipc] create_playlist failed', error);
+  }
+  playlist ||= {
     id: `pl-${Date.now()}`,
     name: `新播放列表 ${index}`,
     icon: 'list-music',
     system: false,
-    songIds: s.playing.song ? [s.playing.song.id] : [],
+    songIds: [],
   };
+  if (s.playing.song) {
+    await addSongsToPlaylist([s.playing.song.id], playlist.id);
+    try {
+      const playlists = await getPlaylists();
+      playlist = playlists.find(item => item.id === playlist.id) || playlist;
+      setState({ playlists });
+    } catch {
+      playlist = { ...playlist, songIds: [s.playing.song.id] };
+    }
+  }
+  const exists = getState().playlists.some(item => item.id === playlist.id);
   setState({
-    playlists: [...s.playlists, playlist],
+    playlists: exists
+      ? getState().playlists.map(item => item.id === playlist.id ? playlist : item)
+      : [...getState().playlists, playlist],
     sidebarActive: `pl-${playlist.id}`,
     view: 'playlist',
     activePlaylistId: playlist.id,
   });
   showToast('已创建播放列表');
+}
+
+function defaultPlaylistId() {
+  return getState().playlists.find(playlist => !playlist.system)?.id || null;
 }

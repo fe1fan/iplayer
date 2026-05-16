@@ -10,6 +10,8 @@ pub fn run(conn: &Connection) -> CommandResult<()> {
         "
         CREATE TABLE IF NOT EXISTS songs (
           id TEXT PRIMARY KEY,
+          file_path TEXT UNIQUE,
+          folder_id TEXT,
           title TEXT NOT NULL,
           artist TEXT NOT NULL,
           album TEXT NOT NULL,
@@ -120,10 +122,35 @@ pub fn run(conn: &Connection) -> CommandResult<()> {
         );
 
         CREATE INDEX IF NOT EXISTS idx_songs_search ON songs(title, artist, album);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_songs_file_path ON songs(file_path) WHERE file_path IS NOT NULL;
+        CREATE INDEX IF NOT EXISTS idx_songs_folder ON songs(folder_id);
         CREATE INDEX IF NOT EXISTS idx_playlist_songs_playlist ON playlist_songs(playlist_id, position);
         CREATE INDEX IF NOT EXISTS idx_recent_plays_song ON recent_plays(song_id, played_at);
         ",
     )?;
 
+    ensure_column(conn, "songs", "file_path", "TEXT")?;
+    ensure_column(conn, "songs", "folder_id", "TEXT")?;
+
+    Ok(())
+}
+
+fn ensure_column(
+    conn: &Connection,
+    table: &str,
+    column: &str,
+    definition: &str,
+) -> CommandResult<()> {
+    let mut stmt = conn.prepare(&format!("PRAGMA table_info({table})"))?;
+    let rows = stmt.query_map([], |row| row.get::<_, String>(1))?;
+    for row in rows {
+        if row? == column {
+            return Ok(());
+        }
+    }
+
+    conn.execute_batch(&format!(
+        "ALTER TABLE {table} ADD COLUMN {column} {definition};"
+    ))?;
     Ok(())
 }

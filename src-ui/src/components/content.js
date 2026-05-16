@@ -1,5 +1,6 @@
 import { setState, getState } from '../state.js';
-import { songs, albums, folders, getArtists, formatDuration } from '../mock-data.js';
+import { songs as mockSongs, albums as mockAlbums, folders as mockFolders, formatDuration } from '../mock-data.js';
+import { describeIpcError, getPlaylists, pickAndScanLibrary } from '../ipc.js';
 import { playSong, playSongList } from '../player-actions.js';
 import { showToast } from './toast.js';
 import * as pluginPage from './plugin-panel.js';
@@ -10,6 +11,7 @@ function coverSvg(cls) {
 }
 
 function renderAlbumGrid() {
+  const albums = getAlbums();
   return `<div class="album-grid">
     ${albums.map(a => `
       <div class="album-card" data-album-id="${a.id}" role="button" tabindex="0" aria-label="${a.title}">
@@ -59,6 +61,9 @@ function renderSongList(songList, playingId) {
 
 export function render() {
   const s = getState();
+  const songs = getSongs();
+  const albums = getAlbums();
+  const folders = getFolders();
   const isAlbumView = s.view === 'albums';
   const isSearch = s.view === 'search';
   const activePlaylist = s.playlists.find(pl => pl.id === s.activePlaylistId);
@@ -85,7 +90,7 @@ export function render() {
   } else if (s.view === 'albums') {
     body = renderAlbumGrid();
   } else if (s.view === 'artists') {
-    body = renderEntityGrid(getArtists(), 'artist');
+    body = renderEntityGrid(getArtists(songs), 'artist');
   } else if (s.view === 'folders') {
     body = renderEntityGrid(folders, 'folder');
   } else {
@@ -140,6 +145,8 @@ export function bind(root) {
     return;
   }
 
+  const songs = getSongs();
+
   el.querySelectorAll('.view-toggle button').forEach(btn => {
     btn.addEventListener('click', () => {
       const v = btn.dataset.view;
@@ -147,8 +154,28 @@ export function bind(root) {
     });
   });
 
-  el.querySelector('[aria-label="导入音乐"]')?.addEventListener('click', () => {
-    showToast('已模拟导入 12 首歌曲');
+  el.querySelector('[aria-label="导入音乐"]')?.addEventListener('click', async () => {
+    try {
+      const result = await pickAndScanLibrary();
+      if (!result) return;
+      const playlists = await getPlaylists();
+      const likedPlaylist = playlists.find(playlist => playlist.id === 'liked');
+      const updates = {
+        librarySongs: result.songs || [],
+        libraryAlbums: result.albums || [],
+        view: 'songs',
+        sidebarActive: 'songs',
+      };
+      if (playlists.length) {
+        updates.playlists = playlists;
+        updates.likedIds = new Set(likedPlaylist?.songIds || []);
+      }
+      setState(updates);
+      showToast(`已导入 ${result.imported ?? result.total ?? 0} 首歌曲`);
+    } catch (error) {
+      console.warn('[ipc] scan_library failed', error);
+      showToast(`导入失败：${describeIpcError(error)}`, 'error');
+    }
   });
 
   el.querySelectorAll('tr[data-song-id]').forEach(tr => {
@@ -202,6 +229,8 @@ export function bind(root) {
 
 function currentList() {
   const s = getState();
+  const songs = getSongs();
+  const folders = getFolders();
   const activePlaylist = s.playlists.find(pl => pl.id === s.activePlaylistId);
   if (s.view === 'search') return s._searchResults || [];
   if (s.view === 'playlist') {
@@ -216,4 +245,51 @@ function currentList() {
     return songs.filter(song => folder?.songIds.includes(song.id));
   }
   return songs;
+}
+
+function getSongs() {
+  return getState().librarySongs || mockSongs;
+}
+
+function getAlbums() {
+  return getState().libraryAlbums || mockAlbums;
+}
+
+function getFolders() {
+  const songs = getSongs();
+  if (!getState().librarySongs) return mockFolders;
+
+  const folders = new Map();
+  songs.forEach(song => {
+    if (!song.folderId) return;
+    const current = folders.get(song.folderId) || {
+      id: song.folderId,
+      name: folderName(song.filePath, song.folderId),
+      songIds: [],
+    };
+    current.songIds.push(song.id);
+    folders.set(song.folderId, current);
+  });
+  return Array.from(folders.values());
+}
+
+function getArtists(songs) {
+  return Array.from(songs.reduce((map, song) => {
+    const current = map.get(song.artist) || { id: song.artist, name: song.artist, songCount: 0, albumIds: new Set() };
+    current.songCount += 1;
+    current.albumIds.add(song.albumId);
+    map.set(song.artist, current);
+    return map;
+  }, new Map()).values()).map(artist => ({
+    id: artist.id,
+    name: artist.name,
+    songCount: artist.songCount,
+    albumCount: artist.albumIds.size,
+  }));
+}
+
+function folderName(filePath, fallback) {
+  if (!filePath) return fallback;
+  const parts = filePath.split('/').filter(Boolean);
+  return parts.length > 1 ? parts[parts.length - 2] : fallback;
 }

@@ -291,6 +291,8 @@ fn song(
 ) -> Song {
     Song {
         id: id.into(),
+        file_path: None,
+        folder_id: None,
         title: title.into(),
         artist: artist.into(),
         album: album.into(),

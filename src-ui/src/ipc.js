@@ -15,6 +15,26 @@ export async function scanLibrary(path) {
   return invokeOrFallback('scan_library', { path }, () => ({ songs, albums, total: songs.length }));
 }
 
+export async function pickAndScanLibrary() {
+  if (isTauri()) {
+    return invoke('pick_and_scan_library');
+  }
+
+  const path = window.prompt('输入要导入的音乐文件夹路径');
+  if (!path) return null;
+  return scanLibrary(path);
+}
+
+export function describeIpcError(error) {
+  if (!error) return '未知错误';
+  if (typeof error === 'string') return error;
+  return error.message || error.code || JSON.stringify(error);
+}
+
+export async function getLibrary() {
+  return invokeOrFallback('get_library', {}, () => ({ songs, albums, total: songs.length }));
+}
+
 export async function searchSongs(query) {
   return invokeOrFallback('search_songs', { query: query || '' }, () => {
     if (!query) return songs;
@@ -60,5 +80,12 @@ export async function createPlaylist(name) {
       system: false,
       songIds: [],
     },
+  }));
+}
+
+export async function addSongsToPlaylist(playlistId, songIds) {
+  return invokeOrFallback('add_songs_to_playlist', { playlistId, songIds }, () => ({
+    success: true,
+    playlist: null,
   }));
 }

@@ -1,7 +1,9 @@
 use crate::{
     db::repository,
     error::CommandResult,
-    model::library::{CreatePlaylistResponse, Playlist, ToggleLikeResponse},
+    model::library::{
+        AddSongsToPlaylistResponse, CreatePlaylistResponse, Playlist, ToggleLikeResponse,
+    },
     state::{with_db, AppState},
 };
 use tauri::State;
@@ -19,6 +21,21 @@ pub fn create_playlist(
     with_db(&state, |conn| {
         let playlist = repository::create_playlist(conn, name)?;
         Ok(CreatePlaylistResponse {
+            success: true,
+            playlist,
+        })
+    })
+}
+
+#[tauri::command]
+pub fn add_songs_to_playlist(
+    playlist_id: String,
+    song_ids: Vec<String>,
+    state: State<'_, AppState>,
+) -> CommandResult<AddSongsToPlaylistResponse> {
+    with_db(&state, |conn| {
+        let playlist = repository::add_songs_to_playlist(conn, &playlist_id, &song_ids)?;
+        Ok(AddSongsToPlaylistResponse {
             success: true,
             playlist,
         })

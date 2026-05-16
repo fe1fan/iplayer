@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "com.iplayer.app",
   "build": {
-    "frontendDist": "../src-ui",
+    "frontendDist": "../src-ui/dist",
     "devUrl": "http://localhost:1420"
   },
   "app": {

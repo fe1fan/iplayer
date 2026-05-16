@@ -13,6 +13,8 @@ pub struct Song {
     pub cover_class: String,
     pub year: i32,
     pub track: String,
+    pub file_path: Option<String>,
+    pub folder_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,6 +53,8 @@ pub struct ScanSummary {
     pub albums: Vec<Album>,
     pub total: usize,
     pub scanned_path: Option<String>,
+    pub imported: usize,
+    pub skipped: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -80,6 +84,13 @@ pub struct ToggleLikeResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreatePlaylistResponse {
+    pub success: bool,
+    pub playlist: Playlist,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddSongsToPlaylistResponse {
     pub success: bool,
     pub playlist: Playlist,
 }

@@ -3,6 +3,7 @@ use crate::{
     model::library::{Album, MetadataPatch, Playlist, Song},
 };
 use rusqlite::{params, Connection, OptionalExtension};
+use std::path::Path;
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
@@ -35,10 +36,48 @@ pub fn seed_demo_data(conn: &Connection, seed: &LibrarySeed) -> CommandResult<()
     Ok(())
 }
 
+pub fn import_scanned_songs(
+    conn: &Connection,
+    root_path: &str,
+    songs: &[Song],
+) -> CommandResult<()> {
+    let folder_id = format!("folder-{}", stable_hash(root_path));
+    let folder_name = Path::new(root_path)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .filter(|name| !name.trim().is_empty())
+        .unwrap_or(root_path);
+
+    conn.execute(
+        "
+        INSERT INTO folders (id, name, path)
+        VALUES (?1, ?2, ?3)
+        ON CONFLICT(path) DO UPDATE SET
+          name = excluded.name,
+          updated_at = CURRENT_TIMESTAMP
+        ",
+        params![folder_id, folder_name, root_path],
+    )?;
+
+    if !songs.is_empty() {
+        conn.execute("DELETE FROM songs WHERE file_path IS NULL", [])?;
+    }
+
+    for song in songs {
+        let mut song = song.clone();
+        if song.folder_id.is_none() {
+            song.folder_id = Some(folder_id.clone());
+        }
+        upsert_song(conn, &song)?;
+    }
+
+    rebuild_library_facets(conn)
+}
+
 pub fn list_songs(conn: &Connection) -> CommandResult<Vec<Song>> {
     let mut stmt = conn.prepare(
         "
-        SELECT id, title, artist, album, album_id, duration, format, cover_class, year, track
+        SELECT id, title, artist, album, album_id, duration, format, cover_class, year, track, file_path, folder_id
         FROM songs
         ORDER BY title COLLATE NOCASE
         ",
@@ -78,7 +117,7 @@ pub fn search_songs(conn: &Connection, query: &str) -> CommandResult<Vec<Song>> 
     let pattern = format!("%{}%", query.to_lowercase());
     let mut stmt = conn.prepare(
         "
-        SELECT id, title, artist, album, album_id, duration, format, cover_class, year, track
+        SELECT id, title, artist, album, album_id, duration, format, cover_class, year, track, file_path, folder_id
         FROM songs
         WHERE lower(title) LIKE ?1 OR lower(artist) LIKE ?1 OR lower(album) LIKE ?1
         ORDER BY title COLLATE NOCASE
@@ -91,7 +130,7 @@ pub fn search_songs(conn: &Connection, query: &str) -> CommandResult<Vec<Song>> 
 pub fn get_song(conn: &Connection, song_id: &str) -> CommandResult<Option<Song>> {
     conn.query_row(
         "
-        SELECT id, title, artist, album, album_id, duration, format, cover_class, year, track
+        SELECT id, title, artist, album, album_id, duration, format, cover_class, year, track, file_path, folder_id
         FROM songs
         WHERE id = ?1
         ",
@@ -134,6 +173,7 @@ pub fn update_song_metadata(
         params![song.id, song.title, song.artist, song.album, song.year, song.track],
     )?;
 
+    rebuild_library_facets(conn)?;
     Ok(song)
 }
 
@@ -157,8 +197,15 @@ pub fn list_playlists(conn: &Connection) -> CommandResult<Vec<Playlist>> {
     let mut playlists = Vec::new();
     for row in rows {
         let (id, name, icon, system) = row?;
+        let song_ids = if id == "liked" {
+            liked_song_ids(conn)?
+        } else if id == "recent" {
+            recent_song_ids(conn)?
+        } else {
+            playlist_song_ids(conn, &id)?
+        };
         playlists.push(Playlist {
-            song_ids: playlist_song_ids(conn, &id)?,
+            song_ids,
             id,
             name,
             icon,
@@ -183,6 +230,41 @@ pub fn create_playlist(conn: &Connection, name: Option<String>) -> CommandResult
     };
     upsert_playlist(conn, &playlist, index + 100)?;
     Ok(playlist)
+}
+
+pub fn add_songs_to_playlist(
+    conn: &Connection,
+    playlist_id: &str,
+    song_ids: &[String],
+) -> CommandResult<Playlist> {
+    let playlist = get_playlist(conn, playlist_id)?
+        .ok_or_else(|| AppError::not_found("playlist not found"))?;
+    if playlist.system {
+        return Err(AppError::state(
+            "system playlists cannot be modified directly",
+        ));
+    }
+
+    let mut position: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM playlist_songs WHERE playlist_id = ?1",
+        params![playlist_id],
+        |row| row.get(0),
+    )?;
+    for song_id in song_ids {
+        if get_song(conn, song_id)?.is_none() {
+            continue;
+        }
+        conn.execute(
+            "
+            INSERT OR IGNORE INTO playlist_songs (playlist_id, song_id, position)
+            VALUES (?1, ?2, ?3)
+            ",
+            params![playlist_id, song_id, position],
+        )?;
+        position += 1;
+    }
+
+    get_playlist(conn, playlist_id)?.ok_or_else(|| AppError::not_found("playlist not found"))
 }
 
 pub fn toggle_like(conn: &Connection, song_id: &str) -> CommandResult<bool> {
@@ -244,12 +326,66 @@ fn upsert_album(conn: &Connection, album: &Album) -> CommandResult<()> {
     Ok(())
 }
 
-fn upsert_song(conn: &Connection, song: &Song) -> CommandResult<()> {
+fn rebuild_library_facets(conn: &Connection) -> CommandResult<()> {
+    conn.execute("DELETE FROM albums", [])?;
     conn.execute(
         "
-        INSERT INTO songs (id, title, artist, album, album_id, duration, format, cover_class, year, track)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+        INSERT INTO albums (id, title, artist, year, song_count, cover_class)
+        SELECT
+          album_id,
+          album,
+          MIN(artist),
+          COALESCE(NULLIF(MIN(year), 0), 0),
+          COUNT(*),
+          MIN(cover_class)
+        FROM songs
+        GROUP BY album_id, album
+        ",
+        [],
+    )?;
+
+    conn.execute("DELETE FROM artists", [])?;
+    conn.execute(
+        "
+        INSERT INTO artists (id, name, song_count, album_count)
+        SELECT
+          'artist-' || lower(hex(name)),
+          name,
+          COUNT(*),
+          COUNT(DISTINCT album_id)
+        FROM (
+          SELECT artist AS name, album_id
+          FROM songs
+        )
+        GROUP BY name
+        ",
+        [],
+    )?;
+
+    Ok(())
+}
+
+fn upsert_song(conn: &Connection, song: &Song) -> CommandResult<()> {
+    if let Some(file_path) = song.file_path.as_deref() {
+        let existing_id: Option<String> = conn
+            .query_row(
+                "SELECT id FROM songs WHERE file_path = ?1",
+                params![file_path],
+                |row| row.get(0),
+            )
+            .optional()?;
+        if let Some(existing_id) = existing_id {
+            update_song_row(conn, &existing_id, song)?;
+            return Ok(());
+        }
+    }
+
+    conn.execute(
+        "
+        INSERT INTO songs (id, file_path, folder_id, title, artist, album, album_id, duration, format, cover_class, year, track)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
         ON CONFLICT(id) DO UPDATE SET
+          file_path = excluded.file_path,
           title = excluded.title,
           artist = excluded.artist,
           album = excluded.album,
@@ -259,10 +395,50 @@ fn upsert_song(conn: &Connection, song: &Song) -> CommandResult<()> {
           cover_class = excluded.cover_class,
           year = excluded.year,
           track = excluded.track,
+          folder_id = excluded.folder_id,
           updated_at = CURRENT_TIMESTAMP
         ",
         params![
             song.id,
+            song.file_path,
+            song.folder_id,
+            song.title,
+            song.artist,
+            song.album,
+            song.album_id,
+            song.duration as i64,
+            song.format,
+            song.cover_class,
+            song.year,
+            song.track
+        ],
+    )?;
+    Ok(())
+}
+
+fn update_song_row(conn: &Connection, song_id: &str, song: &Song) -> CommandResult<()> {
+    conn.execute(
+        "
+        UPDATE songs
+        SET
+          file_path = ?2,
+          folder_id = ?3,
+          title = ?4,
+          artist = ?5,
+          album = ?6,
+          album_id = ?7,
+          duration = ?8,
+          format = ?9,
+          cover_class = ?10,
+          year = ?11,
+          track = ?12,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?1
+        ",
+        params![
+            song_id,
+            song.file_path,
+            song.folder_id,
             song.title,
             song.artist,
             song.album,
@@ -328,6 +504,71 @@ fn playlist_song_ids(conn: &Connection, playlist_id: &str) -> CommandResult<Vec<
     rows.collect::<Result<Vec<_>, _>>().map_err(AppError::from)
 }
 
+fn liked_song_ids(conn: &Connection) -> CommandResult<Vec<String>> {
+    let mut stmt = conn.prepare(
+        "
+        SELECT song_id
+        FROM liked_songs
+        ORDER BY created_at DESC
+        ",
+    )?;
+    let rows = stmt.query_map([], |row| row.get(0))?;
+    rows.collect::<Result<Vec<_>, _>>().map_err(AppError::from)
+}
+
+fn recent_song_ids(conn: &Connection) -> CommandResult<Vec<String>> {
+    let mut stmt = conn.prepare(
+        "
+        SELECT song_id
+        FROM recent_plays
+        GROUP BY song_id
+        ORDER BY MAX(played_at) DESC
+        LIMIT 100
+        ",
+    )?;
+    let rows = stmt.query_map([], |row| row.get(0))?;
+    rows.collect::<Result<Vec<_>, _>>().map_err(AppError::from)
+}
+
+fn get_playlist(conn: &Connection, playlist_id: &str) -> CommandResult<Option<Playlist>> {
+    let row = conn
+        .query_row(
+            "
+            SELECT id, name, icon, system
+            FROM playlists
+            WHERE id = ?1
+            ",
+            params![playlist_id],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, i64>(3)? != 0,
+                ))
+            },
+        )
+        .optional()?;
+
+    let Some((id, name, icon, system)) = row else {
+        return Ok(None);
+    };
+    let song_ids = if id == "liked" {
+        liked_song_ids(conn)?
+    } else if id == "recent" {
+        recent_song_ids(conn)?
+    } else {
+        playlist_song_ids(conn, &id)?
+    };
+    Ok(Some(Playlist {
+        id,
+        name,
+        icon,
+        system,
+        song_ids,
+    }))
+}
+
 fn collect_songs(
     rows: impl Iterator<Item = Result<Song, rusqlite::Error>>,
 ) -> CommandResult<Vec<Song>> {
@@ -346,7 +587,18 @@ fn map_song(row: &rusqlite::Row<'_>) -> rusqlite::Result<Song> {
         cover_class: row.get(7)?,
         year: row.get(8)?,
         track: row.get(9)?,
+        file_path: row.get(10)?,
+        folder_id: row.get(11)?,
     })
+}
+
+fn stable_hash(input: &str) -> String {
+    let mut hash = 0xcbf29ce484222325u64;
+    for byte in input.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    format!("{hash:016x}")
 }
 
 #[cfg(test)]
@@ -412,6 +664,48 @@ mod tests {
         assert!(!toggle_like(&conn, "s-2").expect("toggle"));
     }
 
+    #[test]
+    fn adds_songs_to_regular_playlists() {
+        let conn = setup();
+        let playlist = create_playlist(&conn, Some("添加测试".into())).expect("playlist");
+        let updated = add_songs_to_playlist(&conn, &playlist.id, &["s-1".into(), "s-2".into()])
+            .expect("add songs");
+
+        assert_eq!(updated.song_ids, vec!["s-1".to_string(), "s-2".to_string()]);
+    }
+
+    #[test]
+    fn imports_scanned_songs_and_rebuilds_albums() {
+        let conn = setup();
+        let scanned = Song {
+            id: "song-scan-1".into(),
+            file_path: Some("/tmp/music/new-track.flac".into()),
+            folder_id: None,
+            title: "New Track".into(),
+            artist: "New Artist".into(),
+            album: "New Album".into(),
+            album_id: "album-new".into(),
+            duration: 180,
+            format: "FLAC".into(),
+            cover_class: "cover-b".into(),
+            year: 2026,
+            track: "1".into(),
+        };
+
+        import_scanned_songs(&conn, "/tmp/music", &[scanned]).expect("import scan");
+
+        let songs = search_songs(&conn, "new track").expect("search");
+        assert_eq!(songs.len(), 1);
+        let expected_folder_id = format!("folder-{}", stable_hash("/tmp/music"));
+        assert_eq!(
+            songs[0].folder_id.as_deref(),
+            Some(expected_folder_id.as_str())
+        );
+
+        let albums = list_albums(&conn).expect("albums");
+        assert!(albums.iter().any(|album| album.id == "album-new"));
+    }
+
     fn setup() -> Connection {
         let conn = Connection::open_in_memory().expect("open in-memory db");
         migrations::run(&conn).expect("migrate");
@@ -432,6 +726,8 @@ mod tests {
             songs: vec![
                 Song {
                     id: "s-1".into(),
+                    file_path: None,
+                    folder_id: None,
                     title: "Bohemian Rhapsody".into(),
                     artist: "Queen".into(),
                     album: "A Night at the Opera".into(),
@@ -444,6 +740,8 @@ mod tests {
                 },
                 Song {
                     id: "s-2".into(),
+                    file_path: None,
+                    folder_id: None,
                     title: "Love of My Life".into(),
                     artist: "Queen".into(),
                     album: "A Night at the Opera".into(),

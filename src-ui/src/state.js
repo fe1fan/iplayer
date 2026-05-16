@@ -9,6 +9,8 @@ const state = {
   selectedAlbumId: null,
   selectedArtist: null,
   selectedFolder: null,
+  librarySongs: null,
+  libraryAlbums: null,
 
   playing: { song: null, isPlaying: false, progress: 0.38, duration: 355 },
   queue: [],

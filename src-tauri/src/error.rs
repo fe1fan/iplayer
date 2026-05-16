@@ -63,4 +63,13 @@ impl From<tauri::Error> for AppError {
     }
 }
 
+impl From<lofty::error::LoftyError> for AppError {
+    fn from(error: lofty::error::LoftyError) -> Self {
+        Self {
+            code: "metadata_error",
+            message: error.to_string(),
+        }
+    }
+}
+
 pub type CommandResult<T> = Result<T, AppError>;

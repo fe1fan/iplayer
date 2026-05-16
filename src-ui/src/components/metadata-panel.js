@@ -1,5 +1,6 @@
 import { setState, getState } from '../state.js';
-import { songs } from '../mock-data.js';
+import { songs as mockSongs } from '../mock-data.js';
+import { updateMetadata } from '../ipc.js';
 import { showToast } from './toast.js';
 
 function coverSvg(cls) {
@@ -82,27 +83,43 @@ export function bind(root) {
     el.querySelector('#metaTrack').value = song.track || '';
     showToast('已填入模拟匹配结果');
   });
-  el.querySelector('[data-action="apply"]')?.addEventListener('click', () => {
+  el.querySelector('[data-action="apply"]')?.addEventListener('click', async () => {
     const s = getState();
     const song = s.metadata.song;
     if (song) {
-      const target = songs.find(item => item.id === song.id);
-      const next = {
-        ...song,
+      const patch = {
         title: el.querySelector('#metaTitle')?.value.trim() || song.title,
         artist: el.querySelector('#metaArtist')?.value.trim() || song.artist,
         album: el.querySelector('#metaAlbum')?.value.trim() || song.album,
         year: Number(el.querySelector('#metaYear')?.value) || song.year,
         track: el.querySelector('#metaTrack')?.value.trim() || song.track,
       };
+      let next = { ...song, ...patch };
+      try {
+        const result = await updateMetadata(song.id, patch);
+        next = result?.song || next;
+      } catch (error) {
+        console.warn('[ipc] update_metadata failed', error);
+      }
+      const currentSongs = getSongs();
+      const target = currentSongs.find(item => item.id === song.id);
       if (target) Object.assign(target, next);
+      if (s.librarySongs) {
+        setState({
+          librarySongs: s.librarySongs.map(item => item.id === song.id ? next : item),
+        });
+      }
       if (s.playing.song?.id === song.id) {
-        setState({ playing: { ...s.playing, song: target || next } });
+        setState({ playing: { ...s.playing, song: next } });
       }
     }
     closePanel();
     setState({ _toast: { msg: '元数据修复完成', type: 'success', ts: Date.now() } });
   });
+}
+
+function getSongs() {
+  return getState().librarySongs || mockSongs;
 }
 
 function closePanel() {
