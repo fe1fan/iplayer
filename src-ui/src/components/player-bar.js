@@ -60,6 +60,44 @@ export function render() {
   </div>`;
 }
 
+function enableDrag(element, onValue) {
+  if (!element) return;
+
+  let dragging = false;
+
+  function calcPct(e) {
+    const rect = element.getBoundingClientRect();
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    return Math.max(0, Math.min(1, x / rect.width));
+  }
+
+  function start(e) {
+    e.preventDefault();
+    dragging = true;
+    document.body.style.userSelect = 'none';
+    onValue(calcPct(e));
+  }
+
+  function move(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    onValue(calcPct(e));
+  }
+
+  function end() {
+    if (!dragging) return;
+    dragging = false;
+    document.body.style.userSelect = '';
+  }
+
+  element.addEventListener('mousedown', start);
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', end);
+  element.addEventListener('touchstart', start, { passive: false });
+  document.addEventListener('touchmove', move, { passive: false });
+  document.addEventListener('touchend', end);
+}
+
 export function bind(root) {
   const bar = root.querySelector('#npBar') || root.querySelector('.np-bar');
   if (!bar) return;
@@ -94,11 +132,11 @@ export function bind(root) {
     if (s.playing.song) setState({ mini: !s.mini, expanded: false, lyrics: false });
   });
 
-  bar.querySelector('#progressBar')?.addEventListener('click', function(e) {
-    setProgressByPointer(e, this);
+  enableDrag(bar.querySelector('#progressBar'), pct => {
+    setProgressByPointer({ offsetX: pct * (bar.querySelector('#progressBar')?.offsetWidth || 1) }, bar.querySelector('#progressBar'));
   });
 
-  bar.querySelector('#volTrack')?.addEventListener('click', function(e) {
-    setVolumeByPointer(e, this);
+  enableDrag(bar.querySelector('#volTrack'), pct => {
+    setVolumeByPointer({ offsetX: pct * (bar.querySelector('#volTrack')?.offsetWidth || 1) }, bar.querySelector('#volTrack'));
   });
 }

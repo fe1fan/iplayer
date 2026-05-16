@@ -25,8 +25,7 @@ serde_json = "1"
 log = "0.4"
 
 # Audio engine
-symphonia = { version = "0.5", features = ["mp3", "flac", "ogg", "wav", "aac"] }
-rodio = "0.20"
+rodio = { version = "0.20", features = ["symphonia-all"] }
 
 # Metadata
 lofty = "0.22"
