@@ -19,104 +19,112 @@ export function renderPage() {
   const folders = getManagedFolders(s);
   
   return `
-    <div class="settings-page">
-      <div class="settings-section">
-        <h2>资料库</h2>
-        <div class="settings-group">
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-title">本地目录</div>
-              <div class="settings-desc">正在管理的音乐文件夹</div>
-            </div>
-            <div class="settings-control">
-              <button class="btn btn-ghost btn-sm" data-action="add-folder">添加目录</button>
-            </div>
-          </div>
+    <div class="plugin-page" id="settingsPage">
+      <section class="plugin-section plugin-hero">
+        <div>
+          <h2>设置</h2>
+          <p>个性化你的播放器体验，管理本地音乐资料库及系统行为。</p>
+        </div>
+        <div class="plugin-stats">
+          <span><strong>${folders.length}</strong> 资料库目录</span>
+          <span><strong>${s.librarySongs?.length || 0}</strong> 首歌曲</span>
+          <span><strong>v0.1.0</strong> 应用版本</span>
+        </div>
+      </section>
+
+      <section class="plugin-section">
+        <div class="plugin-section-head">
+          <h4>资料库管理</h4>
+          <button class="btn btn-primary btn-sm" data-action="add-folder"><i data-lucide="plus"></i> 添加目录</button>
+        </div>
+        <div class="plugin-list">
           ${folders.length > 0 ? folders.map(f => `
-            <div class="settings-row">
-              <div class="settings-info">
-                <div class="settings-title" style="font-family:var(--font-mono);font-size:12px;word-break:break-all;padding-right:12px;">${f.path}</div>
-                <div class="settings-desc">${f.songCount} 首歌</div>
-              </div>
-              <div class="settings-control">
-                <button class="extra-btn" data-action="remove-folder" data-path="${f.path}" aria-label="移除目录"><i data-lucide="trash-2"></i></button>
-              </div>
+            <div class="plugin-row">
+              <span class="plugin-status on"></span>
+              <span class="plugin-row-main">
+                <span class="plugin-name" style="font-family:var(--font-mono);font-size:11px;">${f.path}</span>
+                <span class="plugin-source">${f.songCount} 首歌曲</span>
+              </span>
+              <button class="plugin-config-btn" style="background:rgba(220,38,38,0.1);color:#ef4444;" data-action="remove-folder" data-path="${f.path}">移除</button>
             </div>
           `).join('') : `
-            <div class="settings-row">
-              <div class="settings-desc" style="text-align:center;width:100%;">暂无管理的目录</div>
-            </div>
+            <div style="padding:20px;text-align:center;color:var(--text-3);font-size:12px;">暂无管理的目录</div>
           `}
         </div>
-      </div>
+      </section>
 
-      <div class="settings-section">
-        <h2>外观</h2>
-        <div class="settings-group">
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-title">主题</div>
-              <div class="settings-desc">选择应用的主题风格</div>
+      <div class="plugin-page-layout">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <section class="plugin-section">
+            <div class="plugin-section-head">
+              <h4>外观</h4>
             </div>
-            <div class="settings-control">
-              <select class="settings-select" data-setting="theme">
-                <option value="system">跟随系统</option>
-                <option value="dark" selected>深色</option>
-                <option value="light">浅色</option>
-              </select>
+            <div class="plugin-form">
+              <label class="plugin-field">
+                <span>主题风格</span>
+                <select data-setting="theme">
+                  <option value="system">跟随系统</option>
+                  <option value="dark" selected>深色模式</option>
+                  <option value="light">浅色模式</option>
+                </select>
+              </label>
+              <label class="plugin-check">
+                <input type="checkbox" checked>
+                <span>毛玻璃特效 (Acrylic)</span>
+              </label>
             </div>
-          </div>
-        </div>
-      </div>
+          </section>
 
-      <div class="settings-section">
-        <h2>播放</h2>
-        <div class="settings-group">
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-title">淡入淡出 (Crossfade)</div>
-              <div class="settings-desc">切换歌曲时平滑过渡</div>
+          <section class="plugin-section">
+            <div class="plugin-section-head">
+              <h4>播放行为</h4>
             </div>
-            <div class="settings-control">
-              <label class="toggle-switch">
+            <div class="plugin-form">
+              <label class="plugin-check">
                 <input type="checkbox" data-setting="crossfade" checked>
-                <span class="slider"></span>
+                <span>启用淡入淡出 (Crossfade)</span>
+              </label>
+              <label class="plugin-field">
+                <span>淡入淡出时长 (秒)</span>
+                <input type="range" min="0" max="10" value="3">
+              </label>
+              <label class="plugin-check">
+                <input type="checkbox" checked>
+                <span>播放完毕后自动停止</span>
               </label>
             </div>
-          </div>
+          </section>
         </div>
-      </div>
-      
-      <div class="settings-section">
-        <h2>高级</h2>
-        <div class="settings-group">
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-title">硬件加速</div>
-              <div class="settings-desc">使用 GPU 加速 UI 渲染</div>
-            </div>
-            <div class="settings-control">
-              <label class="toggle-switch">
-                <input type="checkbox" data-setting="hwaccel" checked>
-                <span class="slider"></span>
-              </label>
-            </div>
+
+        <section class="plugin-section selected-plugin">
+          <div class="plugin-section-head">
+            <h4>高级选项</h4>
           </div>
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-title">缓存限制</div>
-              <div class="settings-desc">最大封面和歌词缓存</div>
-            </div>
-            <div class="settings-control">
-              <select class="settings-select" data-setting="cache-size">
+          <div class="plugin-form" style="gap:15px;">
+            <label class="plugin-check">
+              <input type="checkbox" data-setting="hwaccel" checked>
+              <span>硬件加速 (GPU)</span>
+            </label>
+            <label class="plugin-field">
+              <span>缓存限制</span>
+              <select data-setting="cache-size">
                 <option value="128">128 MB</option>
                 <option value="256" selected>256 MB</option>
                 <option value="512">512 MB</option>
                 <option value="1024">1 GB</option>
               </select>
+            </label>
+            <div style="margin-top:10px;">
+              <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;border:1px solid var(--border);">清理缓存数据</button>
             </div>
           </div>
-        </div>
+          <div style="margin-top:20px;padding-top:15px;border-top:1px solid var(--border);">
+            <div class="plugin-meta-grid">
+              <span>应用标识</span><strong>com.iplayer.app</strong>
+              <span>数据目录</span><strong>~/Library/Application Support/...</strong>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   `;
@@ -127,7 +135,6 @@ export function bindPage(root) {
   
   root.querySelectorAll('[data-action="remove-folder"]').forEach(btn => {
     btn.addEventListener('click', () => {
-      // Mock remove action
       const path = btn.dataset.path;
       import('./toast.js').then(({ showToast }) => showToast(`目录 ${path} 已解除管理`, 'success'));
     });
@@ -135,8 +142,7 @@ export function bindPage(root) {
   
   root.querySelectorAll('[data-action="add-folder"]').forEach(btn => {
     btn.addEventListener('click', () => {
-      // Trigger library scan
-      const content = root.querySelector('.content');
+      const content = document.querySelector('.content');
       const importBtn = content?.querySelector('[aria-label="导入音乐"]');
       if (importBtn) importBtn.click();
     });
