@@ -9,10 +9,10 @@ pub fn get_lyrics(
     song_id: String,
     state: State<'_, AppState>,
 ) -> CommandResult<Option<Vec<String>>> {
-    let store = state
-        .library
+    let lyrics = state
+        .lyrics
         .lock()
-        .map_err(|_| AppError::state("library state is unavailable"))?;
+        .map_err(|_| AppError::state("lyrics state is unavailable"))?;
 
-    Ok(store.lyrics.get(&song_id).cloned())
+    Ok(lyrics.get(&song_id).cloned())
 }

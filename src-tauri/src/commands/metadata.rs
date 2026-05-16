@@ -1,7 +1,8 @@
 use crate::{
-    error::{AppError, CommandResult},
+    db::repository,
+    error::CommandResult,
     model::library::{MetadataPatch, Song, UpdateMetadataResponse},
-    state::AppState,
+    state::{with_db, AppState},
 };
 use tauri::State;
 
@@ -10,12 +11,7 @@ pub fn get_song_metadata(
     song_id: String,
     state: State<'_, AppState>,
 ) -> CommandResult<Option<Song>> {
-    let store = state
-        .library
-        .lock()
-        .map_err(|_| AppError::state("library state is unavailable"))?;
-
-    Ok(store.songs.iter().find(|song| song.id == song_id).cloned())
+    with_db(&state, |conn| repository::get_song(conn, &song_id))
 }
 
 #[tauri::command]
@@ -24,34 +20,11 @@ pub fn update_metadata(
     data: MetadataPatch,
     state: State<'_, AppState>,
 ) -> CommandResult<UpdateMetadataResponse> {
-    let mut store = state
-        .library
-        .lock()
-        .map_err(|_| AppError::state("library state is unavailable"))?;
-    let song = store
-        .songs
-        .iter_mut()
-        .find(|song| song.id == song_id)
-        .ok_or_else(|| AppError::not_found("song not found"))?;
-
-    if let Some(title) = data.title {
-        song.title = title;
-    }
-    if let Some(artist) = data.artist {
-        song.artist = artist;
-    }
-    if let Some(album) = data.album {
-        song.album = album;
-    }
-    if let Some(year) = data.year {
-        song.year = year;
-    }
-    if let Some(track) = data.track {
-        song.track = track;
-    }
-
-    Ok(UpdateMetadataResponse {
-        success: true,
-        song: song.clone(),
+    with_db(&state, |conn| {
+        let song = repository::update_song_metadata(conn, &song_id, data)?;
+        Ok(UpdateMetadataResponse {
+            success: true,
+            song,
+        })
     })
 }

@@ -22,6 +22,13 @@ impl AppError {
             message: message.into(),
         }
     }
+
+    pub fn database(message: impl Into<String>) -> Self {
+        Self {
+            code: "database_error",
+            message: message.into(),
+        }
+    }
 }
 
 impl fmt::Display for AppError {
@@ -31,5 +38,29 @@ impl fmt::Display for AppError {
 }
 
 impl Error for AppError {}
+
+impl From<rusqlite::Error> for AppError {
+    fn from(error: rusqlite::Error) -> Self {
+        Self::database(error.to_string())
+    }
+}
+
+impl From<std::io::Error> for AppError {
+    fn from(error: std::io::Error) -> Self {
+        Self {
+            code: "io_error",
+            message: error.to_string(),
+        }
+    }
+}
+
+impl From<tauri::Error> for AppError {
+    fn from(error: tauri::Error) -> Self {
+        Self {
+            code: "tauri_error",
+            message: error.to_string(),
+        }
+    }
+}
 
 pub type CommandResult<T> = Result<T, AppError>;

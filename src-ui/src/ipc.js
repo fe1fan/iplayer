@@ -49,3 +49,16 @@ export async function toggleLike(songId) {
 export async function getPlaylists() {
   return invokeOrFallback('get_playlists', {}, () => []);
 }
+
+export async function createPlaylist(name) {
+  return invokeOrFallback('create_playlist', { name }, () => ({
+    success: true,
+    playlist: {
+      id: `pl-${Date.now()}`,
+      name: name || '新播放列表',
+      icon: 'list-music',
+      system: false,
+      songIds: [],
+    },
+  }));
+}

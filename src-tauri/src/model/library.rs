@@ -76,3 +76,10 @@ pub struct ToggleLikeResponse {
     pub success: bool,
     pub liked: bool,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatePlaylistResponse {
+    pub success: bool,
+    pub playlist: Playlist,
+}
