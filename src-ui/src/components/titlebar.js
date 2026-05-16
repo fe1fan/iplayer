@@ -19,6 +19,9 @@ export function render() {
     <button class="titlebar-action-btn${s.mini ? ' active' : ''}" data-action="toggle-mini" aria-label="迷你模式" aria-pressed="${s.mini}">
       <i data-lucide="picture-in-picture-2"></i>
     </button>
+    <button class="titlebar-action-btn${s.pluginPanel.open ? ' active' : ''}" data-action="toggle-plugins" aria-label="插件系统" aria-pressed="${s.pluginPanel.open}">
+      <i data-lucide="plug"></i>
+    </button>
   </div>`;
 }
 
@@ -34,6 +37,11 @@ export function bind() {
     const s = getState();
     if (s.playing.song) setState({ mini: !s.mini, expanded: false, lyrics: false });
     else showToast('请先选择一首歌曲', 'error');
+  });
+
+  el.querySelector('[data-action="toggle-plugins"]')?.addEventListener('click', () => {
+    const s = getState();
+    setState({ pluginPanel: { ...s.pluginPanel, open: !s.pluginPanel.open } });
   });
 
   const searchInput = el.querySelector('#searchInput');

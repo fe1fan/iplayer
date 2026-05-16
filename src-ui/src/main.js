@@ -13,6 +13,7 @@ import * as nowPlaying from './components/now-playing.js';
 import * as lyrics from './components/lyrics.js';
 import * as miniMode from './components/mini-mode.js';
 import * as metadataPanel from './components/metadata-panel.js';
+import * as pluginPanel from './components/plugin-panel.js';
 import * as contextMenu from './components/context-menu.js';
 import * as titlebar from './components/titlebar.js';
 import * as toast from './components/toast.js';
@@ -42,6 +43,7 @@ function renderApp() {
     ${nowPlaying.render()}
     ${lyrics.render()}
     ${metadataPanel.render()}
+    ${pluginPanel.render()}
     ${shouldRenderMiniMode() ? miniMode.render() : ''}
     ${contextMenu.render()}
     ${toast.render()}
@@ -59,6 +61,7 @@ function bindAll() {
   lyrics.bind(app);
   miniMode.bind(app);
   metadataPanel.bind(app);
+  pluginPanel.bind(app);
   contextMenu.bind(app);
   toast.bind(app);
 }
@@ -78,6 +81,9 @@ subscribe('selectedFolder', scheduleRender);
 subscribe('shuffle', scheduleRender);
 subscribe('loopMode', scheduleRender);
 subscribe('lyricsPanel', scheduleRender);
+subscribe('pluginPanel', scheduleRender);
+subscribe('pluginHooks', scheduleRender);
+subscribe('plugins', scheduleRender);
 subscribe('volume', scheduleRender);
 subscribe('contextMenu', scheduleRender);
 
@@ -118,6 +124,7 @@ document.addEventListener('keydown', e => {
     const s = getState();
     if (s.contextMenu.open) setState({ contextMenu: { open: false, x: 0, y: 0, target: null } });
     else if (s.metadata.open) setState({ metadata: { open: false, song: null } });
+    else if (s.pluginPanel.open) setState({ pluginPanel: { ...s.pluginPanel, open: false } });
     else if (s.lyrics) setState({ lyrics: false });
     else if (s.expanded) setState({ expanded: false });
     else if (s.mini) setState({ mini: false });
