@@ -2,6 +2,7 @@ use crate::{
     db::{migrations, repository, repository::LibrarySeed},
     error::{AppError, CommandResult},
     model::library::{Album, Playlist, Song},
+    playback::engine::PlaybackEngine,
 };
 use rusqlite::Connection;
 use std::{collections::HashMap, fs, sync::Mutex};
@@ -10,6 +11,7 @@ use tauri::{AppHandle, Manager, Runtime};
 pub struct AppState {
     pub db: Mutex<Connection>,
     pub lyrics: Mutex<HashMap<String, Vec<String>>>,
+    pub playback: PlaybackEngine,
 }
 
 impl AppState {
@@ -22,9 +24,12 @@ impl AppState {
         migrations::run(&conn)?;
         repository::seed_demo_data(&conn, &demo_seed())?;
 
+        let playback = PlaybackEngine::new(app)?;
+
         Ok(Self {
             db: Mutex::new(conn),
             lyrics: Mutex::new(demo_lyrics()),
+            playback,
         })
     }
 }

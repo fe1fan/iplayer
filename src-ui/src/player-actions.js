@@ -1,6 +1,7 @@
 import { getState, setState } from './state.js';
 import { songs } from './mock-data.js';
-import { addSongsToPlaylist as ipcAddSongsToPlaylist, createPlaylist as ipcCreatePlaylist, deletePlaylist as ipcDeletePlaylist, getPlaylists, removeSongFromPlaylist as ipcRemoveSongFromPlaylist, renamePlaylist as ipcRenamePlaylist, toggleLike as ipcToggleLike } from './ipc.js';
+import { isTauri } from '@tauri-apps/api/core';
+import { addSongsToPlaylist as ipcAddSongsToPlaylist, createPlaylist as ipcCreatePlaylist, deletePlaylist as ipcDeletePlaylist, getPlaylists, ipcPause, ipcPlaySong, ipcResume, ipcSeek, ipcSetLoopMode, ipcSetVolume, ipcSkipTrack, ipcStop, removeSongFromPlaylist as ipcRemoveSongFromPlaylist, renamePlaylist as ipcRenamePlaylist, toggleLike as ipcToggleLike } from './ipc.js';
 import { showToast } from './components/toast.js';
 
 function librarySongs(state = getState()) {
@@ -32,6 +33,10 @@ export function playSong(songId, queueSongs = librarySongs()) {
     queueIndex,
     recentIds,
   });
+
+  if (isTauri()) {
+    ipcPlaySong(songId, queue, queueIndex).catch(err => console.warn('[ipc] play_song failed', err));
+  }
 }
 
 export function playSongList(queueSongs, startSongId = queueSongs[0]?.id) {
@@ -46,10 +51,31 @@ export function togglePlay() {
     playSong(allSongs[0]?.id, allSongs);
     return;
   }
-  setState({ playing: { ...s.playing, isPlaying: !s.playing.isPlaying } });
+  const isPlaying = !s.playing.isPlaying;
+  setState({ playing: { ...s.playing, isPlaying } });
+
+  if (isTauri()) {
+    (isPlaying ? ipcResume() : ipcPause()).catch(err => console.warn('[ipc] toggle play failed', err));
+  }
 }
 
 export function skipTrack(dir) {
+  if (isTauri()) {
+    ipcSkipTrack(dir).then(result => {
+      if (result?.song) {
+        const s = getState();
+        const recentIds = [result.song.id, ...s.recentIds.filter(id => id !== result.song.id)].slice(0, 20);
+        setState({
+          playing: { song: result.song, isPlaying: true, progress: 0, duration: result.song.duration },
+          queue: result.queue || s.queue,
+          queueIndex: result.queueIndex ?? s.queueIndex,
+          recentIds,
+        });
+      }
+    }).catch(err => console.warn('[ipc] skip_track failed', err));
+    return;
+  }
+
   const s = getState();
   if (!s.playing.song) return;
   if (s.loopMode === 'one') {
@@ -84,14 +110,23 @@ export function setProgressByPointer(event, element) {
   const s = getState();
   if (!s.playing.song || !element.offsetWidth) return;
   const pct = Math.max(0, Math.min(1, event.offsetX / element.offsetWidth));
-  setState({ playing: { ...s.playing, progress: Math.round(pct * s.playing.duration) } });
+  const progress = Math.round(pct * s.playing.duration);
+  setState({ playing: { ...s.playing, progress } });
+
+  if (isTauri()) {
+    ipcSeek(progress).catch(err => console.warn('[ipc] seek failed', err));
+  }
 }
 
 export function setVolumeByPointer(event, element) {
   if (!element.offsetWidth) return;
   const pct = Math.max(0, Math.min(1, event.offsetX / element.offsetWidth));
   setState({ volume: pct });
-  showToast(`音量 ${Math.round(pct * 100)}%`);
+  if (isTauri()) {
+    ipcSetVolume(pct).catch(err => console.warn('[ipc] set_volume failed', err));
+  } else {
+    showToast(`音量 ${Math.round(pct * 100)}%`);
+  }
 }
 
 export async function toggleLike(songId = getState().playing.song?.id) {
@@ -128,6 +163,9 @@ export function cycleLoopMode() {
   const current = getState().loopMode;
   const loopMode = current === 'list' ? 'one' : current === 'one' ? 'off' : 'list';
   setState({ loopMode });
+  if (isTauri()) {
+    ipcSetLoopMode(loopMode).catch(err => console.warn('[ipc] set_loop_mode failed', err));
+  }
   showToast(loopMode === 'one' ? '单曲循环' : loopMode === 'off' ? '循环已关闭' : '列表循环');
 }
 

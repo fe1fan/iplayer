@@ -137,21 +137,53 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// --- Playback progress simulation ---
-setInterval(() => {
-  const s = getState();
-  if (!s.playing.isPlaying || !s.playing.song) return;
-  const progress = s.playing.progress + 1;
-  if (progress >= s.playing.duration) {
-    if (s.loopMode === 'off') setState({ playing: { ...s.playing, progress: s.playing.duration, isPlaying: false } });
-    else skipTrack(1);
-  } else {
-    s.playing.progress = progress;
-    const pct = (progress / s.playing.duration * 100) + '%';
-    document.querySelectorAll('[data-progress-fill]').forEach(fill => { fill.style.width = pct; });
-    document.querySelectorAll('[data-current-time]').forEach(el => { el.textContent = formatDuration(progress); });
-  }
-}, 1000);
+// --- Playback progress ---
+if (isTauri()) {
+  getCurrentWindow().listen('playback:progress', event => {
+    const d = event.payload;
+    if (!d) return;
+    const s = getState();
+    if (s.playing.song && s.playing.song.id === d.songId) {
+      const playing = { ...s.playing, progress: d.position, duration: d.duration, isPlaying: d.isPlaying };
+      setState({ playing, volume: d.volume });
+      const pct = d.duration > 0 ? (d.position / d.duration * 100) + '%' : '0%';
+      document.querySelectorAll('[data-progress-fill]').forEach(fill => { fill.style.width = pct; });
+      document.querySelectorAll('[data-current-time]').forEach(el => { el.textContent = formatDuration(d.position); });
+    }
+  });
+
+  getCurrentWindow().listen('playback:state', event => {
+    const d = event.payload;
+    if (!d) return;
+    if (d.song) {
+      const s = getState();
+      const recentIds = [d.song.id, ...s.recentIds.filter(id => id !== d.song.id)].slice(0, 20);
+      setState({
+        playing: { song: d.song, isPlaying: d.isPlaying ?? true, progress: d.position ?? 0, duration: d.duration ?? d.song.duration },
+        queueIndex: d.queueIndex ?? s.queueIndex,
+        recentIds,
+      });
+    } else {
+      setState({ playing: { ...getState().playing, isPlaying: false } });
+    }
+  });
+} else {
+  // Mock progress timer for browser preview
+  setInterval(() => {
+    const s = getState();
+    if (!s.playing.isPlaying || !s.playing.song) return;
+    const progress = s.playing.progress + 1;
+    if (progress >= s.playing.duration) {
+      if (s.loopMode === 'off') setState({ playing: { ...s.playing, progress: s.playing.duration, isPlaying: false } });
+      else skipTrack(1);
+    } else {
+      s.playing.progress = progress;
+      const pct = (progress / s.playing.duration * 100) + '%';
+      document.querySelectorAll('[data-progress-fill]').forEach(fill => { fill.style.width = pct; });
+      document.querySelectorAll('[data-current-time]').forEach(el => { el.textContent = formatDuration(progress); });
+    }
+  }, 1000);
+}
 
 // --- Init ---
 initWindowModeHandlers();

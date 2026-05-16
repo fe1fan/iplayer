@@ -107,3 +107,41 @@ export async function removeSongFromPlaylist(playlistId, songId) {
     playlist: null,
   }));
 }
+
+// --- Playback ---
+
+export async function ipcPlaySong(songId, queue, queueIndex) {
+  return invokeOrFallback('play_song', { songId, queue, queueIndex }, () => null);
+}
+
+export async function ipcPause() {
+  return invokeOrFallback('pause', {}, () => null);
+}
+
+export async function ipcResume() {
+  return invokeOrFallback('resume', {}, () => null);
+}
+
+export async function ipcStop() {
+  return invokeOrFallback('stop', {}, () => null);
+}
+
+export async function ipcSeek(positionSecs) {
+  return invokeOrFallback('seek', { positionSecs }, () => null);
+}
+
+export async function ipcSetVolume(volume) {
+  return invokeOrFallback('set_volume', { volume }, () => null);
+}
+
+export async function ipcSkipTrack(delta) {
+  return invokeOrFallback('skip_track', { delta }, () => null);
+}
+
+export async function ipcSetLoopMode(mode) {
+  return invokeOrFallback('set_loop_mode', { mode }, () => null);
+}
+
+export async function ipcGetPlaybackState() {
+  return invokeOrFallback('get_playback_state', {}, () => null);
+}

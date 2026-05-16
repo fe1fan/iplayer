@@ -3,6 +3,7 @@ mod db;
 mod error;
 mod library;
 mod model;
+mod playback;
 mod state;
 
 use state::AppState;
@@ -27,6 +28,15 @@ pub fn run() {
             commands::playlist::remove_song_from_playlist,
             commands::playlist::rename_playlist,
             commands::playlist::toggle_like,
+            commands::playback::get_playback_state,
+            commands::playback::pause,
+            commands::playback::play_song,
+            commands::playback::resume,
+            commands::playback::seek,
+            commands::playback::set_loop_mode,
+            commands::playback::set_volume,
+            commands::playback::skip_track,
+            commands::playback::stop,
         ])
         .setup(|app| {
             let state = AppState::initialize(app.handle())?;
