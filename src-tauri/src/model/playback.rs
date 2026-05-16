@@ -18,7 +18,7 @@ impl Default for PlaybackState {
             is_playing: false,
             progress: 0,
             duration: 0,
-            volume: 0.7,
+            volume: 1.0,
         }
     }
 }

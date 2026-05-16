@@ -175,7 +175,7 @@ body.mini-window .plugin-panel{display:none!important}
 .np-progress-row{display:flex;align-items:center;gap:6px;width:100%;max-width:480px}
 .np-progress{flex:1;height:3px;background:var(--bg-elevated);border-radius:2px;cursor:pointer;position:relative;transition:height var(--t-fast)}
 .np-progress:hover{height:5px}
-.np-progress .fill{height:100%;background:var(--accent);border-radius:2px;transition:width 0.3s linear}
+.np-progress .fill{height:100%;background:var(--accent);border-radius:2px;transition:width 0.3s linear;pointer-events:none}
 .np-time{font-family:var(--font-mono);font-size:10px;color:var(--text-3);white-space:nowrap;min-width:32px}
 .np-time:last-child{text-align:right}
 /* Right: extras */
@@ -206,7 +206,7 @@ body.mini-window .plugin-panel{display:none!important}
 .track-meta p{font-size:12px;color:var(--text-2)}
 .exp-progress{width:100%;padding:0 12px}
 .exp-progress-track{width:100%;height:4px;background:var(--bg-elevated);border-radius:2px;cursor:pointer}
-.exp-progress-track .fill{height:100%;background:var(--accent);border-radius:2px;position:relative}
+.exp-progress-track .fill{height:100%;background:var(--accent);border-radius:2px;position:relative;pointer-events:none}
 .exp-progress-track .fill::after{content:'';position:absolute;right:-4px;top:-2px;width:8px;height:8px;background:var(--accent);border-radius:var(--r-full)}
 .exp-time{display:flex;justify-content:space-between;margin-top:2px;font-family:var(--font-mono);font-size:10px;color:var(--text-3)}
 .exp-controls{display:flex;align-items:center;gap:24px}

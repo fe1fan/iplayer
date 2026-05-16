@@ -17,7 +17,7 @@ const state = {
   queueIndex: 0,
   shuffle: false,
   loopMode: 'list',
-  volume: 0.7,
+  volume: 1.0,
 
   playlists: [
     { id: 'liked', name: '收藏', icon: 'heart', system: true, songIds: [] },

@@ -61,7 +61,7 @@ impl PlaybackEngine {
             queue: Vec::new(),
             queue_index: 0,
             loop_mode: LoopMode::Off,
-            volume: 0.7,
+            volume: 1.0,
             is_playing: false,
             stopping: false,
         }));
@@ -77,7 +77,7 @@ impl PlaybackEngine {
                 log::error!("failed to create audio sink");
                 return;
             };
-            sink.set_volume(0.7);
+            sink.set_volume(1.0);
 
             let _stream = stream;
             let mut last_emit = std::time::Instant::now()
@@ -104,7 +104,7 @@ impl PlaybackEngine {
                             }
                         }
                         AudioCommand::SetVolume { volume } => {
-                            sink.set_volume(volume.clamp(0.0, 1.0));
+                            sink.set_volume(volume.clamp(0.0, 2.0));
                         }
                         AudioCommand::Shutdown => return,
                     }
@@ -284,7 +284,7 @@ impl PlaybackEngine {
     }
 
     pub fn set_volume(&self, volume: f32) -> CommandResult<()> {
-        let volume = volume.clamp(0.0, 1.0);
+        let volume = volume.clamp(0.0, 2.0);
         self.tx
             .send(AudioCommand::SetVolume { volume })
             .map_err(|_| AppError::state("audio thread disconnected"))?;
