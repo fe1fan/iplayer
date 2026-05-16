@@ -4,6 +4,7 @@ import { describeIpcError, getPlaylists, pickAndScanLibrary } from '../ipc.js';
 import { playSong, playSongList } from '../player-actions.js';
 import { showToast } from './toast.js';
 import * as pluginPage from './plugin-panel.js';
+import * as settingsPage from './settings.js';
 
 function coverSvg(cls) {
   const fill = cls === 'cover-a' ? '#DBEAFE' : '#DCFCE7';
@@ -80,12 +81,15 @@ export function render() {
     folder: selectedFolder?.name || '文件夹',
     plugins: '插件',
     'plugin-config': '插件配置',
+    settings: '设置',
   };
   const title = isSearch ? `搜索 "${s.searchQuery}"` : (titleMap[s.view] || '歌曲');
   const playingId = s.playing.song?.id;
 
   let body;
-  if (s.view === 'plugins' || s.view === 'plugin-config') {
+  if (s.view === 'settings') {
+    body = settingsPage.renderPage();
+  } else if (s.view === 'plugins' || s.view === 'plugin-config') {
     body = pluginPage.renderPage();
   } else if (s.view === 'albums') {
     body = renderAlbumGrid();
@@ -125,7 +129,7 @@ export function render() {
     <div class="content-header">
       <h1>${title}</h1>
       <div class="actions">
-        ${s.view === 'plugins' || s.view === 'plugin-config' ? '' : `<div class="view-toggle">
+        ${s.view === 'plugins' || s.view === 'plugin-config' || s.view === 'settings' ? '' : `<div class="view-toggle">
           <button data-view="albums" class="${isAlbumView ? 'active' : ''}" aria-label="网格视图"><i data-lucide="grid-3x3"></i></button>
           <button data-view="songs" class="${!isAlbumView ? 'active' : ''}" aria-label="列表视图"><i data-lucide="list"></i></button>
         </div>
@@ -139,6 +143,11 @@ export function render() {
 export function bind(root) {
   const el = root.querySelector('#contentArea') || root.querySelector('.content');
   if (!el) return;
+
+  if (getState().view === 'settings') {
+    settingsPage.bindPage(el);
+    return;
+  }
 
   if (getState().view === 'plugins' || getState().view === 'plugin-config') {
     pluginPage.bindPage(el);

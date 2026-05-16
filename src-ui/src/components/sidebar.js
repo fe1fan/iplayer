@@ -43,6 +43,7 @@ export function render() {
     { key: 'artists', icon: 'mic-2', label: '艺术家' },
     { key: 'folders', icon: 'folder', label: '文件夹' },
     { key: 'plugins', icon: 'plug', label: '插件' },
+    { key: 'settings', icon: 'settings', label: '设置' },
   ];
   const plItems = s.playlists.map(pl => {
     const icon = pl.icon === 'heart' ? 'heart' : pl.icon === 'clock' ? 'clock' : 'list-music';
