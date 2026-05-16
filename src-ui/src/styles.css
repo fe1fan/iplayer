@@ -427,3 +427,21 @@ body.mini-window .mini-vol-track{width:32px}
 .sidebar-main-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; }
 .sidebar-main-scroll:hover::-webkit-scrollbar-thumb { background: var(--border); }
 .sidebar-system-footer { border-top: 1px solid var(--border); padding-top: 4px; padding-bottom: 4px; margin-top: auto; }
+
+/* ── Align sidebar system footer with player bar height ── */
+.sidebar-system-footer {
+  height: var(--np-bar-h);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-top: 1px solid var(--border);
+  padding: 0;
+  margin-top: auto;
+}
+.sidebar-system-footer .sidebar-item {
+  min-height: 28px; /* Slightly more compact to fit two items in np-bar-h if needed, or adjust as per UI */
+}
+/* Ensure the overall sidebar takes full height to push footer down */
+.sidebar {
+  height: 100%;
+}
