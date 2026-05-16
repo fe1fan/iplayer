@@ -145,18 +145,24 @@ document.addEventListener('keydown', e => {
 });
 
 // --- Playback progress ---
+function paintProgress(position, duration) {
+  const pct = duration > 0 ? (position / duration * 100) + '%' : '0%';
+  document.querySelectorAll('[data-progress-fill]').forEach(fill => { fill.style.width = pct; });
+  document.querySelectorAll('[data-current-time]').forEach(el => { el.textContent = formatDuration(position); });
+}
+
 if (isTauri()) {
   getCurrentWindow().listen('playback:progress', event => {
     const d = event.payload;
     if (!d) return;
     const s = getState();
-    if (s.playing.song && s.playing.song.id === d.songId) {
-      const playing = { ...s.playing, progress: d.position, duration: d.duration, isPlaying: d.isPlaying };
-      setState({ playing, volume: d.volume });
-      const pct = d.duration > 0 ? (d.position / d.duration * 100) + '%' : '0%';
-      document.querySelectorAll('[data-progress-fill]').forEach(fill => { fill.style.width = pct; });
-      document.querySelectorAll('[data-current-time]').forEach(el => { el.textContent = formatDuration(d.position); });
-    }
+    if (!s.playing.song || s.playing.song.id !== d.songId) return;
+    // Mutate in place so subscribers don't re-render every 500ms.
+    s.playing.progress = d.position;
+    s.playing.duration = d.duration;
+    s.playing.isPlaying = d.isPlaying;
+    if (typeof d.volume === 'number') s.volume = d.volume;
+    paintProgress(d.position, d.duration);
   });
 
   getCurrentWindow().listen('playback:state', event => {
@@ -185,9 +191,7 @@ if (isTauri()) {
       else skipTrack(1);
     } else {
       s.playing.progress = progress;
-      const pct = (progress / s.playing.duration * 100) + '%';
-      document.querySelectorAll('[data-progress-fill]').forEach(fill => { fill.style.width = pct; });
-      document.querySelectorAll('[data-current-time]').forEach(el => { el.textContent = formatDuration(progress); });
+      paintProgress(progress, s.playing.duration);
     }
   }, 1000);
 }
