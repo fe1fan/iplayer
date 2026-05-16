@@ -16,12 +16,6 @@ export function render() {
       <i data-lucide="search"></i>
       <input type="text" id="searchInput" placeholder="搜索歌曲、艺术家…" aria-label="搜索" value="${s.searchQuery}">
     </div>
-    <button class="titlebar-action-btn${s.mini ? ' active' : ''}" data-action="toggle-mini" aria-label="迷你模式" aria-pressed="${s.mini}">
-      <i data-lucide="picture-in-picture-2"></i>
-    </button>
-    <button class="titlebar-action-btn${s.view === 'plugins' || s.view === 'plugin-config' ? ' active' : ''}" data-action="open-plugins" aria-label="插件系统" aria-pressed="${s.view === 'plugins' || s.view === 'plugin-config'}">
-      <i data-lucide="plug"></i>
-    </button>
   </div>`;
 }
 
@@ -31,22 +25,6 @@ export function bind() {
 
   el.querySelector('[data-action="toggle-sidebar"]')?.addEventListener('click', () => {
     toggleSidebarCollapsed();
-  });
-
-  el.querySelector('[data-action="toggle-mini"]')?.addEventListener('click', () => {
-    const s = getState();
-    if (s.playing.song) setState({ mini: !s.mini, expanded: false, lyrics: false });
-    else showToast('请先选择一首歌曲', 'error');
-  });
-
-  el.querySelector('[data-action="open-plugins"]')?.addEventListener('click', () => {
-    const s = getState();
-    setState({
-      view: 'plugins',
-      sidebarActive: 'plugins',
-      searchQuery: '',
-      pluginPanel: { ...s.pluginPanel, configPluginId: null },
-    });
   });
 
   const searchInput = el.querySelector('#searchInput');
