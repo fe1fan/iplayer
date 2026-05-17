@@ -30,6 +30,7 @@ function registerTauriListeners() {
     s.playing.isPlaying = d.isPlaying;
     if (typeof d.volume === 'number') s.volume = d.volume;
     paintProgress(d.position, d.duration);
+    document.body.classList.toggle('is-playing', !!d.isPlaying);
   });
 
   win.listen('playback:state', event => {

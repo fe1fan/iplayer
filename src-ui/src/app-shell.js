@@ -108,6 +108,7 @@ export function renderApp() {
   `;
   createIcons({ icons });
   bindAll();
+  document.body.classList.toggle('is-playing', !!s.playing.isPlaying);
   restoreUiState(snap);
 }
 
