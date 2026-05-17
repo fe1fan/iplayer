@@ -5,8 +5,8 @@ import { getState, setState } from './state.js';
 
 const MAIN_LABEL = 'main';
 const MINI_LABEL = 'mini-player';
-const MINI_W = 284;
-const MINI_H = 112;
+const MINI_W = 280;
+const MINI_H = 80;
 const SNAPSHOT_KEY = 'iplayer:mini-state';
 
 let miniCloseHandlerReady = false;

@@ -4,6 +4,54 @@ import { cycleLoopMode, skipTrack, togglePlay, toggleShuffle } from '../player-a
 import { ipcSeek } from '../ipc.js';
 import { isTauri } from '@tauri-apps/api/core';
 import { attachSlider } from './slider.js';
+import { getAmplitude } from '../playback-events.js';
+
+const VIZ_N = 240;
+const VIZ_W = 800;
+const VIZ_H = 96;
+const VIZ_BASELINE = VIZ_H / 2;
+const VIZ_GAIN = VIZ_H * 0.42;
+const vizSamples = new Array(VIZ_N).fill(0);
+let vizTarget = null;
+let vizRaf = 0;
+let vizPlaying = false;
+let vizSampleIndex = 0;
+
+function vizFrame() {
+  if (!vizTarget || !vizTarget.isConnected) {
+    vizRaf = 0;
+    return;
+  }
+  const amp = vizPlaying ? getAmplitude() : 0;
+  vizSampleIndex = (vizSampleIndex + 1) & 1;
+  const sign = vizSampleIndex === 0 ? 1 : -1;
+  const jitter = (Math.random() - 0.5) * 1.6;
+  const target = amp * VIZ_GAIN * sign + jitter;
+  // smooth into the previous value to avoid hard zigzag
+  const prev = vizSamples[vizSamples.length - 1];
+  const value = prev * 0.35 + target * 0.65;
+  vizSamples.shift();
+  vizSamples.push(value);
+
+  let d = '';
+  const stepX = VIZ_W / (VIZ_N - 1);
+  for (let i = 0; i < VIZ_N; i++) {
+    const x = (i * stepX).toFixed(1);
+    const y = (VIZ_BASELINE - vizSamples[i]).toFixed(1);
+    d += i === 0 ? `M${x} ${y}` : ` L${x} ${y}`;
+  }
+  vizTarget.setAttribute('d', d);
+  vizRaf = requestAnimationFrame(vizFrame);
+}
+
+function attachVisualizer(root, isPlaying) {
+  const path = root.querySelector('#vizPath');
+  vizTarget = path || null;
+  vizPlaying = !!isPlaying;
+  if (vizTarget && !vizRaf) {
+    vizRaf = requestAnimationFrame(vizFrame);
+  }
+}
 
 function coverSvg(cls, size) {
   const fill = cls === 'cover-a' ? '#DBEAFE' : '#DCFCE7';
@@ -22,17 +70,27 @@ export function render() {
   const openCls = s.expanded ? ' open' : '';
   const repeatIcon = s.loopMode === 'one' ? 'repeat-1' : 'repeat';
   const repeatLabel = s.loopMode === 'one' ? '单曲循环' : s.loopMode === 'off' ? '循环关闭' : '列表循环';
+  const playingCls = s.playing.isPlaying ? ' playing' : '';
 
   return `
-  <div class="overlay np-expanded${openCls}" id="npExpanded" role="dialog" aria-label="播放视图" aria-modal="true">
-    <button class="close-btn" data-action="close" aria-label="关闭"><i data-lucide="x"></i></button>
+  <div class="overlay np-expanded${openCls}${playingCls}" id="npExpanded" role="dialog" aria-label="播放视图" aria-modal="true">
+    <div class="np-expanded-tools">
+      <button class="np-tool-btn" data-action="lyrics" aria-label="歌词"><i data-lucide="text"></i></button>
+      <button class="np-tool-btn" data-action="mini" aria-label="迷你模式"><i data-lucide="minimize-2"></i></button>
+      <button class="np-tool-btn" data-action="close" aria-label="关闭"><i data-lucide="x"></i></button>
+    </div>
+    <div class="np-visualizer" aria-hidden="true">
+      <svg viewBox="0 0 ${VIZ_W} ${VIZ_H}" preserveAspectRatio="none">
+        <path id="vizPath" d="M0 ${VIZ_BASELINE} L${VIZ_W} ${VIZ_BASELINE}"></path>
+      </svg>
+    </div>
     <div class="np-expanded-body">
       <div class="cover-lg ${song.coverClass}">
-        ${song.coverUrl ? `<img src="${song.coverUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--r-md);">` : coverSvg(song.coverClass, 220)}
+        ${song.coverUrl ? `<img src="${song.coverUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--r-md);">` : coverSvg(song.coverClass, 320)}
       </div>
       <div class="track-meta">
         <h2>${song.title}</h2>
-        <p>${song.artist} · ${song.album}</p>
+        <p>${song.artist}<span class="dot">·</span>${song.album}</p>
       </div>
       <div class="exp-progress">
         <div class="exp-progress-track" id="expProgressTrack"><div class="fill" data-progress-fill style="width:${pct}%"></div></div>
@@ -54,6 +112,8 @@ export function bind(root) {
   if (!el) return;
 
   el.querySelector('[data-action="close"]')?.addEventListener('click', () => setState({ expanded: false }));
+  el.querySelector('[data-action="lyrics"]')?.addEventListener('click', () => setState({ expanded: false, lyrics: true }));
+  el.querySelector('[data-action="mini"]')?.addEventListener('click', () => setState({ expanded: false, lyrics: false, mini: true }));
 
   el.querySelector('[data-action="toggle-play"]')?.addEventListener('click', () => {
     togglePlay();
@@ -82,4 +142,6 @@ export function bind(root) {
       }
     },
   });
+
+  attachVisualizer(el, getState().playing.isPlaying);
 }

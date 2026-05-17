@@ -30,6 +30,8 @@ export function bind(root) {
   const el = root.querySelector('#ctxMenu');
   if (!el) return;
 
+  if (getState().contextMenu.open) clampMenu(el);
+
   el.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const action = btn.dataset.action;
@@ -103,6 +105,25 @@ export function bind(root) {
 
 function getSongs() {
   return getState().librarySongs || mockSongs;
+}
+
+function clampMenu(el) {
+  const s = getState();
+  const margin = 8;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const rect = el.getBoundingClientRect();
+  const width = rect.width || el.offsetWidth;
+  const height = rect.height || el.offsetHeight;
+  let x = s.contextMenu.x;
+  let y = s.contextMenu.y;
+  if (x + width > vw - margin) x = Math.max(margin, vw - width - margin);
+  if (y + height > vh - margin) {
+    const flipped = s.contextMenu.y - height;
+    y = flipped >= margin ? flipped : Math.max(margin, vh - height - margin);
+  }
+  el.style.left = `${x}px`;
+  el.style.top = `${y}px`;
 }
 
 function hide() {
