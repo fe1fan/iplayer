@@ -17,6 +17,54 @@ const appEl = document.querySelector('#app');
 let renderPending = false;
 let renderSuppressed = false;
 
+const SCROLL_SELECTORS = [
+  '.content',
+  '.content-body',
+  '.sidebar-main-scroll',
+  '.lyrics-body',
+  '.queue-list',
+  '.meta-panel .panel-body',
+  '.plugin-panel .panel-body',
+];
+
+function captureUiState() {
+  const scrolls = [];
+  for (const sel of SCROLL_SELECTORS) {
+    document.querySelectorAll(sel).forEach((el, index) => {
+      if (el.scrollTop > 0) scrolls.push({ sel, index, top: el.scrollTop });
+    });
+  }
+  const active = document.activeElement;
+  let focus = null;
+  if (active && active !== document.body && active.id) {
+    focus = {
+      id: active.id,
+      selectionStart: active.selectionStart ?? null,
+      selectionEnd: active.selectionEnd ?? null,
+    };
+  }
+  return { scrolls, focus };
+}
+
+function restoreUiState(snap) {
+  for (const item of snap.scrolls) {
+    const matches = document.querySelectorAll(item.sel);
+    const el = matches[item.index];
+    if (el) el.scrollTop = item.top;
+  }
+  if (snap.focus?.id) {
+    const el = document.getElementById(snap.focus.id);
+    if (el && typeof el.focus === 'function') {
+      el.focus();
+      if (typeof el.setSelectionRange === 'function' && snap.focus.selectionStart != null) {
+        try {
+          el.setSelectionRange(snap.focus.selectionStart, snap.focus.selectionEnd ?? snap.focus.selectionStart);
+        } catch { /* ignore */ }
+      }
+    }
+  }
+}
+
 export function applyPlatformClass() {
   const ua = navigator.userAgent || '';
   let platform = 'linux';
@@ -43,6 +91,7 @@ export function scheduleRender() {
 export function renderApp() {
   const s = getState();
   const sidebarWidth = sidebar.getSidebarWidth(s);
+  const snap = captureUiState();
   appEl.innerHTML = `
     ${titlebar.render()}
     <div class="app${s.sidebarCollapsed ? ' sidebar-collapsed' : ''}" id="appShell" style="--sidebar-w-current:${sidebarWidth}px">
@@ -59,6 +108,7 @@ export function renderApp() {
   `;
   createIcons({ icons });
   bindAll();
+  restoreUiState(snap);
 }
 
 function bindAll() {

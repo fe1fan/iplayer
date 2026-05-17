@@ -57,6 +57,8 @@ async function refreshMaximizedIcon() {
 }
 
 let resizeListenerReady = false;
+let searchCaret = null;
+let searchHadFocus = false;
 
 export function bind() {
   const el = document.querySelector('#titlebar');
@@ -81,19 +83,42 @@ export function bind() {
 
   const searchInput = el.querySelector('#searchInput');
   if (searchInput) {
+    let composing = false;
     let timer;
-    searchInput.addEventListener('input', () => {
+
+    function dispatchSearch() {
+      const q = searchInput.value.trim();
+      const s = getState();
+      searchCaret = searchInput.selectionStart;
+      const restoredView = s.sidebarActive?.startsWith('pl-') ? 'playlist' : (s.sidebarActive === 'albums' ? 'albums' : s.sidebarActive || 'songs');
+      setState({
+        searchQuery: q,
+        view: q ? 'search' : restoredView,
+        activePlaylistId: q ? null : s.activePlaylistId,
+      });
+    }
+
+    searchInput.addEventListener('focus', () => { searchHadFocus = true; });
+    searchInput.addEventListener('blur', () => { searchHadFocus = false; });
+    searchInput.addEventListener('compositionstart', () => {
+      composing = true;
       clearTimeout(timer);
-      timer = setTimeout(() => {
-        const q = searchInput.value.trim();
-        const s = getState();
-        const restoredView = s.sidebarActive?.startsWith('pl-') ? 'playlist' : (s.sidebarActive === 'albums' ? 'albums' : s.sidebarActive || 'songs');
-        setState({
-          searchQuery: q,
-          view: q ? 'search' : restoredView,
-          activePlaylistId: q ? null : s.activePlaylistId,
-        });
-      }, 200);
     });
+    searchInput.addEventListener('compositionend', () => {
+      composing = false;
+      clearTimeout(timer);
+      timer = setTimeout(dispatchSearch, 200);
+    });
+    searchInput.addEventListener('input', () => {
+      if (composing) return;
+      clearTimeout(timer);
+      timer = setTimeout(dispatchSearch, 200);
+    });
+
+    if (searchHadFocus) {
+      searchInput.focus();
+      const pos = searchCaret ?? searchInput.value.length;
+      try { searchInput.setSelectionRange(pos, pos); } catch { /* ignore */ }
+    }
   }
 }
