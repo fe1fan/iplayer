@@ -29,6 +29,9 @@
 html{background:transparent}
 body{font-family:var(--font-ui);background:var(--bg-base);color:var(--text-1);-webkit-font-smoothing:antialiased;line-height:1.5;overflow:hidden;height:100vh;padding-top:var(--titlebar-h);-webkit-user-select:none;user-select:none}
 body.mini-window{padding-top:0;background:transparent}
+body:not(.platform-macos):not(.mini-window){background:transparent;padding-top:0}
+body:not(.platform-macos):not(.mini-window) #app{position:relative;width:100vw;height:100vh;padding-top:var(--titlebar-h);background:var(--bg-base);border-radius:10px;overflow:hidden;transform:translateZ(0)}
+body.window-maximized:not(.platform-macos):not(.mini-window) #app{border-radius:0}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
 input,textarea{font-family:inherit;-webkit-user-select:text;user-select:text}
 ::selection{background:var(--accent-muted);color:var(--accent-hover)}
@@ -44,6 +47,8 @@ body.mini-window .plugin-panel{display:none!important}
 
 /* ── Titlebar ── */
 .titlebar{height:var(--titlebar-h);display:flex;align-items:center;gap:8px;padding:0 8px 0 0;background:var(--bg-base);border-bottom:1px solid var(--border);-webkit-user-select:none;user-select:none;position:fixed;top:0;left:0;right:0;z-index:40}
+body:not(.platform-macos) .titlebar{padding-right:0}
+body:not(.platform-macos) .titlebar-traffic-lights{display:none}
 .titlebar-traffic-lights{width:76px;flex-shrink:0;height:100%;display:flex;align-items:center}
 .titlebar-sidebar-toggle{width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:var(--text-3);border-radius:var(--r-sm);transition:all var(--t-fast)}
 .titlebar-sidebar-toggle:hover{color:var(--text-1);background:var(--bg-surface)}

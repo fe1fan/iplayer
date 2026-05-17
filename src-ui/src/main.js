@@ -23,6 +23,14 @@ const app = document.querySelector('#app');
 let renderPending = false;
 let renderSuppressed = false;
 
+(function applyPlatformClass() {
+  const ua = navigator.userAgent || '';
+  let p = 'linux';
+  if (/Mac|iPhone|iPad/.test(ua)) p = 'macos';
+  else if (/Windows/.test(ua)) p = 'windows';
+  document.body.classList.add(`platform-${p}`);
+})();
+
 export function suppressRender(on) {
   renderSuppressed = on;
   if (!on) scheduleRender();
