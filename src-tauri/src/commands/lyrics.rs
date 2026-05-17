@@ -1,6 +1,7 @@
 use crate::{
-    error::{AppError, CommandResult},
-    state::AppState,
+    error::CommandResult,
+    lyrics::{self, LyricLine},
+    state::{with_db, AppState},
 };
 use tauri::State;
 
@@ -8,11 +9,6 @@ use tauri::State;
 pub fn get_lyrics(
     song_id: String,
     state: State<'_, AppState>,
-) -> CommandResult<Option<Vec<String>>> {
-    let lyrics = state
-        .lyrics
-        .lock()
-        .map_err(|_| AppError::state("lyrics state is unavailable"))?;
-
-    Ok(lyrics.get(&song_id).cloned())
+) -> CommandResult<Option<Vec<LyricLine>>> {
+    with_db(&state, |conn| lyrics::find_for_song(conn, &song_id))
 }

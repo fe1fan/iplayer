@@ -3,8 +3,10 @@ use crate::{
     error::{AppError, CommandResult},
     library::scanner,
     model::library::{LibrarySnapshot, ScanSummary, Song},
+    plugin::{self, HookId},
     state::{with_db, AppState},
 };
+use serde_json::json;
 use std::path::Path;
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
@@ -25,10 +27,11 @@ pub fn get_library(state: State<'_, AppState>) -> CommandResult<LibrarySnapshot>
 #[tauri::command]
 pub fn scan_library(
     path: Option<String>,
+    app: AppHandle,
     state: State<'_, AppState>,
 ) -> CommandResult<ScanSummary> {
     if let Some(path) = path.as_deref().filter(|value| !value.trim().is_empty()) {
-        return import_scan(path, &state);
+        return import_scan(path, &app, &state);
     }
 
     with_db(&state, |conn| {
@@ -66,12 +69,22 @@ pub async fn pick_and_scan_library(
     let path = folder
         .into_path()
         .map_err(|error| AppError::state(error.to_string()))?;
-    import_scan(path, &state).map(Some)
+    import_scan(path, &app, &state).map(Some)
 }
 
-fn import_scan(path: impl AsRef<Path>, state: &AppState) -> CommandResult<ScanSummary> {
-    let scan = scanner::scan_path(path)?;
-    with_db(state, |conn| {
+fn import_scan(
+    path: impl AsRef<Path>,
+    app: &AppHandle,
+    state: &AppState,
+) -> CommandResult<ScanSummary> {
+    let path_ref = path.as_ref();
+    plugin::dispatch(
+        app,
+        HookId::LIBRARY_BEFORE_SCAN,
+        json!({ "path": path_ref.display().to_string() }),
+    );
+    let scan = scanner::scan_path(path_ref)?;
+    let summary = with_db(state, |conn| {
         repository::import_scanned_songs(conn, &scan.root_path, &scan.songs)?;
         let songs = repository::list_songs(conn)?;
         let albums = repository::list_albums(conn)?;
@@ -79,9 +92,20 @@ fn import_scan(path: impl AsRef<Path>, state: &AppState) -> CommandResult<ScanSu
             total: songs.len(),
             songs,
             albums,
-            scanned_path: Some(scan.root_path),
+            scanned_path: Some(scan.root_path.clone()),
             imported: scan.songs.len(),
             skipped: scan.skipped,
         })
-    })
+    })?;
+    plugin::dispatch(
+        app,
+        HookId::LIBRARY_AFTER_LOAD,
+        json!({
+            "path": scan.root_path,
+            "imported": summary.imported,
+            "skipped": summary.skipped,
+            "total": summary.total,
+        }),
+    );
+    Ok(summary)
 }

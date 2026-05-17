@@ -1,16 +1,15 @@
 use crate::{
-    db::{migrations, repository, repository::LibrarySeed},
+    db::{migrations, plugin_repo, repository, repository::LibrarySeed},
     error::{AppError, CommandResult},
     model::library::{Album, Playlist, Song},
     playback::engine::PlaybackEngine,
 };
 use rusqlite::Connection;
-use std::{collections::HashMap, fs, sync::Mutex};
+use std::{fs, sync::Mutex};
 use tauri::{AppHandle, Manager, Runtime};
 
 pub struct AppState {
     pub db: Mutex<Connection>,
-    pub lyrics: Mutex<HashMap<String, Vec<String>>>,
     pub playback: PlaybackEngine,
 }
 
@@ -23,12 +22,12 @@ impl AppState {
 
         migrations::run(&conn)?;
         repository::seed_demo_data(&conn, &demo_seed())?;
+        plugin_repo::seed_default_plugins(&conn)?;
 
         let playback = PlaybackEngine::new(app)?;
 
         Ok(Self {
             db: Mutex::new(conn),
-            lyrics: Mutex::new(demo_lyrics()),
             playback,
         })
     }
@@ -243,24 +242,6 @@ fn demo_seed() -> LibrarySeed {
         playlists,
         liked_ids: vec!["s-1".into()],
     }
-}
-
-fn demo_lyrics() -> HashMap<String, Vec<String>> {
-    HashMap::from([(
-        "s-1".to_string(),
-        vec![
-            "",
-            "Is this the real life?",
-            "Is this just fantasy?",
-            "Caught in a landslide",
-            "No escape from reality",
-            "Open your eyes",
-            "Look up to the skies and see",
-        ]
-        .into_iter()
-        .map(String::from)
-        .collect(),
-    )])
 }
 
 fn album(

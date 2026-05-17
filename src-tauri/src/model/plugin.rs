@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Plugin {
@@ -13,4 +13,19 @@ pub struct Plugin {
     pub hooks: Vec<String>,
     pub description: String,
     pub config_type: Option<String>,
+    #[serde(default = "default_settings")]
+    pub settings: Value,
+}
+
+fn default_settings() -> Value {
+    json!({})
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginSourceInput {
+    #[serde(rename = "type")]
+    pub kind: String,
+    pub value: String,
+    pub name: Option<String>,
 }

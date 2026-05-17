@@ -1,5 +1,7 @@
 import { getState, setState } from '../state.js';
 import { showToast } from './toast.js';
+import { loadPluginSource, savePluginSettings, setPluginEnabled } from '../ipc.js';
+import { isTauri } from '@tauri-apps/api/core';
 
 const sourceOptions = [
   { id: 'local', label: '本地' },
@@ -298,14 +300,42 @@ function savePluginConfig(root) {
     else next[field.dataset.configField] = field.value;
   });
   setState({ pluginSettings: { ...s.pluginSettings, [pluginId]: next } });
+  if (isTauri()) {
+    savePluginSettings(pluginId, next).catch(error => {
+      console.warn('[plugin] save settings failed', error);
+      showToast('插件配置保存失败', 'error');
+    });
+  }
   showToast('插件配置已保存');
 }
 
 function togglePlugin(pluginId) {
-  const plugins = getState().plugins.map(plugin =>
-    plugin.id === pluginId ? { ...plugin, enabled: !plugin.enabled } : plugin
-  );
-  setState({ plugins });
+  const current = getState().plugins.find(plugin => plugin.id === pluginId);
+  if (!current) return;
+  const nextEnabled = !current.enabled;
+  applyPluginUpdate({ ...current, enabled: nextEnabled });
+  if (!isTauri()) return;
+  setPluginEnabled(pluginId, nextEnabled)
+    .then(updated => {
+      if (updated) applyPluginUpdate(updated);
+    })
+    .catch(error => {
+      console.warn('[plugin] toggle failed', error);
+      applyPluginUpdate(current);
+      showToast('切换插件失败', 'error');
+    });
+}
+
+function applyPluginUpdate(plugin) {
+  const s = getState();
+  const exists = s.plugins.some(item => item.id === plugin.id);
+  const plugins = exists
+    ? s.plugins.map(item => (item.id === plugin.id ? { ...item, ...plugin } : item))
+    : [plugin, ...s.plugins];
+  const pluginSettings = plugin.settings && typeof plugin.settings === 'object'
+    ? { ...s.pluginSettings, [plugin.id]: plugin.settings }
+    : s.pluginSettings;
+  setState({ plugins, pluginSettings });
 }
 
 function loadPlugin() {
@@ -316,26 +346,43 @@ function loadPlugin() {
     return;
   }
 
-  const id = `plug-${Date.now()}`;
   const resolvedType = inferSourceType(input, s.pluginPanel.sourceType);
-  const plugin = {
-    id,
-    name: inferPluginName(input),
-    version: '0.1.0',
-    source: `${resolvedType}:${input}`,
-    enabled: true,
-    trust: resolvedType === 'local' ? 'local' : 'sandboxed',
-    hooks: ['app:init', 'library:source-resolve', 'playback:before-play', 'ui:plugin-view'],
-    description: '从界面模拟加载的第三方插件，运行时接入后会按声明节点执行。',
-    configType: 'generic',
-  };
+  const sourcePayload = { type: resolvedType, value: input, name: inferPluginName(input) };
 
-  setState({
-    plugins: [plugin, ...s.plugins],
-    pluginSettings: { ...s.pluginSettings, [id]: { sandbox: 'strict', timeout: 10 } },
-    pluginPanel: { ...s.pluginPanel, sourceInput: '', selectedPluginId: id },
-  });
-  showToast('插件已加入模拟列表');
+  if (!isTauri()) {
+    const id = `plug-${Date.now()}`;
+    const plugin = {
+      id,
+      name: sourcePayload.name,
+      version: '0.1.0',
+      source: `${resolvedType}:${input}`,
+      enabled: true,
+      trust: resolvedType === 'local' ? 'local' : 'sandboxed',
+      hooks: ['app:init', 'library:source-resolve', 'playback:before-play', 'ui:plugin-view'],
+      description: '从界面模拟加载的第三方插件，运行时接入后会按声明节点执行。',
+      configType: 'generic',
+      settings: { sandbox: 'strict', timeout: 10 },
+    };
+    applyPluginUpdate(plugin);
+    setState({ pluginPanel: { ...getState().pluginPanel, sourceInput: '', selectedPluginId: id } });
+    showToast('插件已加入模拟列表');
+    return;
+  }
+
+  loadPluginSource(sourcePayload)
+    .then(plugin => {
+      if (!plugin) {
+        showToast('插件加载失败', 'error');
+        return;
+      }
+      applyPluginUpdate(plugin);
+      setState({ pluginPanel: { ...getState().pluginPanel, sourceInput: '', selectedPluginId: plugin.id } });
+      showToast('插件已加载');
+    })
+    .catch(error => {
+      console.warn('[plugin] load failed', error);
+      showToast('插件加载失败', 'error');
+    });
 }
 
 function renderHookGroup(group, s) {

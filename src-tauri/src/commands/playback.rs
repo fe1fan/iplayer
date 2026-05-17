@@ -2,22 +2,31 @@ use crate::{
     db::repository,
     error::CommandResult,
     playback::engine::PlaybackStateSnapshot,
+    plugin::{self, HookId},
     state::AppState,
 };
+use serde_json::json;
 use std::time::Duration;
-use tauri::State;
+use tauri::{AppHandle, State};
 
 #[tauri::command]
 pub fn play_song(
     song_id: String,
     queue: Vec<String>,
     queue_index: Option<usize>,
+    app: AppHandle,
     state: State<'_, AppState>,
 ) -> CommandResult<PlaybackStateSnapshot> {
     let conn = state.db.lock().unwrap();
     let song = repository::get_song(&conn, &song_id)?
         .ok_or_else(|| crate::error::AppError::not_found("song not found"))?;
     drop(conn);
+
+    plugin::dispatch(
+        &app,
+        HookId::PLAYBACK_BEFORE_PLAY,
+        json!({ "songId": song_id, "title": song.title, "artist": song.artist }),
+    );
 
     let queue_index =
         queue_index.unwrap_or(queue.iter().position(|id| id == &song_id).unwrap_or(0));
@@ -38,8 +47,9 @@ pub fn resume(state: State<'_, AppState>) -> CommandResult<PlaybackStateSnapshot
 }
 
 #[tauri::command]
-pub fn stop(state: State<'_, AppState>) -> CommandResult<PlaybackStateSnapshot> {
+pub fn stop(app: AppHandle, state: State<'_, AppState>) -> CommandResult<PlaybackStateSnapshot> {
     state.playback.stop()?;
+    plugin::dispatch(&app, HookId::PLAYBACK_AFTER_STOP, json!({}));
     Ok(state.playback.get_state())
 }
 

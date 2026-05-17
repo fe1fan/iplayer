@@ -73,6 +73,24 @@ export async function getLyrics(songId) {
   return invokeOrFallback('get_lyrics', { songId }, () => lyricsData[songId] || null);
 }
 
+// --- Plugins ---
+
+export async function getPlugins() {
+  return invokeOrFallback('get_plugins', {}, () => null);
+}
+
+export async function loadPluginSource(source) {
+  return invokeOrFallback('load_plugin_source', { source }, () => null);
+}
+
+export async function setPluginEnabled(pluginId, enabled) {
+  return invokeOrFallback('set_plugin_enabled', { pluginId, enabled }, () => null);
+}
+
+export async function savePluginSettings(pluginId, settings) {
+  return invokeOrFallback('save_plugin_settings', { pluginId, settings }, () => null);
+}
+
 export async function toggleLike(songId) {
   return invokeOrFallback('toggle_like', { songId }, () => ({ success: true }));
 }

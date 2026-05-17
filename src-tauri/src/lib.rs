@@ -2,8 +2,10 @@ mod commands;
 mod db;
 mod error;
 mod library;
+mod lyrics;
 mod model;
 mod playback;
+mod plugin;
 mod state;
 
 use state::AppState;
@@ -38,6 +40,10 @@ pub fn run() {
             commands::playback::set_volume,
             commands::playback::skip_track,
             commands::playback::stop,
+            commands::plugin::get_plugins,
+            commands::plugin::load_plugin_source,
+            commands::plugin::save_plugin_settings,
+            commands::plugin::set_plugin_enabled,
         ])
         .setup(|app| {
             let state = AppState::initialize(app.handle())?;
@@ -59,6 +65,12 @@ pub fn run() {
                         .build(),
                 )?;
             }
+
+            plugin::dispatch(
+                app.handle(),
+                plugin::HookId::APP_INIT,
+                serde_json::json!({}),
+            );
             Ok(())
         })
         .run(tauri::generate_context!())

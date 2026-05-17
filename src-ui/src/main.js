@@ -3,7 +3,7 @@ import { songs, formatDuration, getProgressPercent } from './mock-data.js';
 import { createIcons, icons } from 'lucide';
 import { isTauri } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { getLibrary, getPlaylists, searchSongs } from './ipc.js';
+import { getLibrary, getPlaylists, getPlugins, searchSongs } from './ipc.js';
 import { showToast } from './components/toast.js';
 import { hydrateMiniStateIfNeeded, initWindowModeHandlers, shouldRenderMiniMode, syncMiniWindowMode } from './window-mode.js';
 import { skipTrack } from './player-actions.js';
@@ -253,6 +253,22 @@ getPlaylists().then(playlists => {
   });
 }).catch(error => {
   console.warn('[ipc] get_playlists failed', error);
+});
+
+getPlugins().then(plugins => {
+  if (!Array.isArray(plugins) || !plugins.length) return;
+  const pluginSettings = {};
+  for (const plugin of plugins) {
+    if (plugin?.id && plugin.settings && typeof plugin.settings === 'object') {
+      pluginSettings[plugin.id] = plugin.settings;
+    }
+  }
+  setState({
+    plugins,
+    pluginSettings: { ...getState().pluginSettings, ...pluginSettings },
+  });
+}).catch(error => {
+  console.warn('[ipc] get_plugins failed', error);
 });
 
 if (isTauri()) {
