@@ -1,0 +1,9 @@
+.app{display:grid;grid-template-columns:var(--sidebar-w-current,var(--sidebar-w)) minmax(0,1fr);grid-template-rows:1fr var(--np-bar-h);height:calc(100vh - var(--titlebar-h));overflow:hidden;transition:grid-template-columns 280ms cubic-bezier(0.32,0.72,0,1)}
+
+body.mini-window{padding-top:0;background:transparent}
+body.mini-window .titlebar,body.mini-window .app,body.mini-window .overlay,body.mini-window .meta-panel,body.mini-window .ctx-menu,body.mini-window .toast-container{display:none!important}
+body.mini-window .plugin-panel{display:none!important}
+
+body:not(.platform-macos):not(.mini-window){background:transparent;padding-top:0}
+body:not(.platform-macos):not(.mini-window) #app{position:relative;width:100vw;height:100vh;padding-top:var(--titlebar-h);background:var(--bg-base);border-radius:10px;overflow:hidden;transform:translateZ(0)}
+body.window-maximized:not(.platform-macos):not(.mini-window) #app{border-radius:0}

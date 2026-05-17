@@ -1,0 +1,15 @@
+.np-expanded-body{display:flex;flex-direction:column;align-items:center;gap:16px;max-width:340px;width:100%}
+.cover-lg{width:240px;height:240px;border-radius:var(--r-md);overflow:hidden;background:var(--bg-surface)}
+.cover-lg svg{width:100%;height:100%}
+.track-meta{text-align:center}
+.track-meta h2{font-size:16px;font-weight:600;letter-spacing:-0.2px;margin-bottom:2px}
+.track-meta p{font-size:12px;color:var(--text-2)}
+.exp-progress{width:100%;padding:0 12px}
+.exp-progress-track{width:100%;height:4px;background:var(--bg-elevated);border-radius:2px;cursor:pointer}
+.exp-progress-track .fill{height:100%;background:var(--accent);border-radius:2px;position:relative;pointer-events:none}
+.exp-progress-track .fill::after{content:'';position:absolute;right:-4px;top:-2px;width:8px;height:8px;background:var(--accent);border-radius:var(--r-full)}
+.exp-time{display:flex;justify-content:space-between;margin-top:2px;font-family:var(--font-mono);font-size:10px;color:var(--text-3)}
+.exp-controls{display:flex;align-items:center;gap:24px}
+.exp-controls .ctrl-btn{width:34px;height:34px}.exp-controls .ctrl-btn svg{width:18px;height:18px}
+.play-main-lg{width:44px;height:44px;background:var(--accent);color:#fff;border-radius:var(--r-full);display:flex;align-items:center;justify-content:center;transition:all var(--t-fast)}
+.play-main-lg:hover{background:var(--accent-hover)}.play-main-lg svg{width:20px;height:20px}

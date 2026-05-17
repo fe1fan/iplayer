@@ -1,0 +1,21 @@
+.meta-panel{position:fixed;top:0;right:-360px;bottom:0;width:360px;background:var(--bg-base);border-left:1px solid var(--border);z-index:50;display:flex;flex-direction:column;transition:right var(--t-base)}
+.meta-panel.open{right:0}.meta-panel.closing{transition-duration:var(--t-exit)}
+.meta-panel .panel-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)}
+.meta-panel .panel-header h3{font-size:13px;font-weight:600}
+.meta-panel .panel-header button{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-sm);color:var(--text-3);transition:all var(--t-fast)}
+.meta-panel .panel-header button:hover{color:var(--text-1);background:var(--bg-surface)}.meta-panel .panel-header button svg{width:14px;height:14px}
+.meta-panel .panel-body{flex:1;overflow-y:auto;padding:16px}
+.cover-edit{width:140px;height:140px;border-radius:var(--r-md);overflow:hidden;margin:0 auto 16px;position:relative;background:var(--bg-surface)}
+.cover-edit svg{width:100%;height:100%}
+.cover-edit .cover-actions{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);display:flex;gap:3px}
+.cover-edit .cover-actions button{background:rgba(0,0,0,0.5);color:#fff;font-size:10px;padding:3px 7px;border-radius:var(--r-sm);transition:all var(--t-fast);display:flex;align-items:center;gap:3px;min-height:24px}
+.cover-edit .cover-actions button:hover{color:#fff;background:rgba(0,0,0,0.7)}.cover-edit .cover-actions button svg{width:11px;height:11px}
+.field-group{margin-bottom:12px}
+.field-group label{display:block;font-size:10px;font-weight:500;letter-spacing:0.3px;text-transform:uppercase;color:var(--text-3);margin-bottom:3px}
+.field-group input{width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:5px 8px;color:var(--text-1);font-size:12px;outline:none;transition:border-color var(--t-fast)}
+.field-group input:focus{border-color:var(--accent)}
+.field-group .format-info{font-family:var(--font-mono);font-size:10px;color:var(--text-3);margin-top:3px}
+.auto-match{display:flex;align-items:center;gap:6px;width:100%;padding:8px 12px;background:var(--bg-surface);border:1px dashed var(--border);border-radius:var(--r-sm);color:var(--accent);font-size:12px;font-weight:500;margin-top:16px;transition:all var(--t-fast);min-height:32px}
+.auto-match:hover{border-color:var(--accent);background:var(--accent-muted)}.auto-match svg{width:14px;height:14px}
+.meta-panel .panel-footer{display:flex;gap:10px;padding:14px 16px;border-top:1px solid var(--border)}
+.meta-panel .panel-footer .btn{flex:1;justify-content:center;padding:8px;min-height:32px}

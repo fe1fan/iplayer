@@ -1,0 +1,5 @@
+.ctx-menu{position:fixed;z-index:250;background:var(--bg-base);border:1px solid var(--border);border-radius:var(--r-sm);padding:2px;min-width:160px;display:none;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+.ctx-menu.open{display:block}
+.ctx-menu button{display:flex;align-items:center;gap:6px;width:100%;padding:4px 10px;font-size:12px;color:var(--text-2);border-radius:var(--r-sm);transition:all var(--t-fast);min-height:28px}
+.ctx-menu button:hover{color:var(--text-1);background:var(--bg-surface)}.ctx-menu button svg{width:13px;height:13px}
+.ctx-divider{height:1px;background:var(--border);margin:2px 0}

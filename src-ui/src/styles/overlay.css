@@ -1,0 +1,5 @@
+.overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:var(--bg-base);opacity:0;visibility:hidden;transition:opacity var(--t-base),visibility var(--t-base)}
+.overlay.open{opacity:1;visibility:visible}
+.overlay.closing{transition-duration:var(--t-exit)}
+.overlay .close-btn{position:absolute;top:16px;right:16px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-sm);color:var(--text-3);transition:all var(--t-fast)}
+.overlay .close-btn:hover{color:var(--text-1);background:var(--bg-surface)}.overlay .close-btn svg{width:16px;height:16px}

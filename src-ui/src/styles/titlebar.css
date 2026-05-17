@@ -1,0 +1,23 @@
+.titlebar{height:var(--titlebar-h);display:flex;align-items:center;gap:8px;padding:0 8px 0 0;background:var(--bg-base);border-bottom:1px solid var(--border);-webkit-user-select:none;user-select:none;position:fixed;top:0;left:0;right:0;z-index:40}
+body:not(.platform-macos) .titlebar{padding-right:0}
+body:not(.platform-macos) .titlebar-traffic-lights{display:none}
+.titlebar-traffic-lights{width:76px;flex-shrink:0;height:100%;display:flex;align-items:center}
+.titlebar-sidebar-toggle{width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:var(--text-3);border-radius:var(--r-sm);transition:all var(--t-fast)}
+.titlebar-sidebar-toggle:hover{color:var(--text-1);background:var(--bg-surface)}
+.titlebar-sidebar-toggle svg{width:15px;height:15px}
+.titlebar-title{font-size:15px;font-weight:700;color:var(--text-1);letter-spacing:-0.3px;white-space:nowrap}
+.titlebar-action-btn{width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:var(--text-3);border-radius:var(--r-sm);transition:all var(--t-fast)}
+.titlebar-action-btn:hover{color:var(--text-1);background:var(--bg-surface)}
+.titlebar-action-btn.active{color:var(--accent)}
+.titlebar-action-btn svg{width:15px;height:15px}
+.titlebar-search{position:relative;flex:0 1 200px;min-width:100px}
+.titlebar-search input{width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:4px 8px 4px 28px;color:var(--text-1);font-size:12px;outline:none;transition:border-color var(--t-fast)}
+.titlebar-search input:focus{border-color:var(--accent)}
+.titlebar-search input::placeholder{color:var(--text-3)}
+.titlebar-search svg{position:absolute;left:8px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:var(--text-3);pointer-events:none}
+.titlebar-drag{flex:1;height:100%;-webkit-app-region:drag}
+.titlebar-controls{display:flex;align-items:center}
+.titlebar-btn{width:38px;height:var(--titlebar-h);display:flex;align-items:center;justify-content:center;color:var(--text-3);transition:background var(--t-fast),color var(--t-fast)}
+.titlebar-btn:hover{background:var(--bg-surface);color:var(--text-1)}
+.titlebar-btn.close:hover{background:#DC2626;color:#fff}
+.titlebar-btn svg{width:14px;height:14px}
