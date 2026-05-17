@@ -2,19 +2,18 @@ use crate::{
     db::repository,
     error::{AppError, CommandResult},
     model::library::Song,
-    playback::source::{MeterSource, SymphoniaSource},
+    playback::source::SymphoniaSource,
 };
 use rodio::{OutputStream, Sink, Source};
 use std::{
     path::Path,
-    sync::{atomic::{AtomicU32, Ordering}, mpsc, Arc, Mutex},
+    sync::{mpsc, Arc, Mutex},
     time::{Duration, Instant},
 };
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 
 const PROGRESS_INTERVAL: Duration = Duration::from_millis(500);
-const AMPLITUDE_INTERVAL: Duration = Duration::from_millis(33);
-const TICK_INTERVAL: Duration = Duration::from_millis(30);
+const TICK_INTERVAL: Duration = Duration::from_millis(100);
 
 pub struct PlaybackEngine {
     tx: mpsc::Sender<AudioCommand>,
@@ -77,11 +76,10 @@ impl PlaybackEngine {
             is_playing: false,
             auto_advance: false,
         }));
-        let amplitude = Arc::new(AtomicU32::new(0));
 
         let app = app.clone();
         let thread_state = state.clone();
-        std::thread::spawn(move || run_audio_thread(app, thread_state, amplitude, rx));
+        std::thread::spawn(move || run_audio_thread(app, thread_state, rx));
 
         Ok(Self { tx, state })
     }
@@ -207,7 +205,6 @@ fn next_index(current: usize, len: usize, delta: i32, mode: LoopMode) -> Option<
 fn run_audio_thread<R: Runtime>(
     app: AppHandle<R>,
     state: Arc<Mutex<SharedState>>,
-    amplitude: Arc<AtomicU32>,
     rx: mpsc::Receiver<AudioCommand>,
 ) {
     let Ok((stream, handle)) = OutputStream::try_default() else {
@@ -222,13 +219,12 @@ fn run_audio_thread<R: Runtime>(
     sink.set_volume(1.0);
 
     let mut last_emit = Instant::now() - PROGRESS_INTERVAL;
-    let mut last_amp_emit = Instant::now() - AMPLITUDE_INTERVAL;
 
     loop {
         // Drain pending commands without blocking.
         loop {
             match rx.try_recv() {
-                Ok(cmd) => apply_command(&sink, cmd, &amplitude),
+                Ok(cmd) => apply_command(&sink, cmd),
                 Err(mpsc::TryRecvError::Empty) => break,
                 Err(mpsc::TryRecvError::Disconnected) => return,
             }
@@ -239,22 +235,18 @@ fn run_audio_thread<R: Runtime>(
             emit_progress(&app, &state, &sink);
             last_emit = now;
         }
-        if now.duration_since(last_amp_emit) >= AMPLITUDE_INTERVAL {
-            emit_amplitude(&app, &amplitude, !sink.is_paused());
-            last_amp_emit = now;
-        }
 
         if !sink.is_paused() {
-            check_track_end(&app, &state, &sink, &amplitude);
+            check_track_end(&app, &state, &sink);
         }
 
         std::thread::sleep(TICK_INTERVAL);
     }
 }
 
-fn apply_command(sink: &Sink, cmd: AudioCommand, amplitude: &Arc<AtomicU32>) {
+fn apply_command(sink: &Sink, cmd: AudioCommand) {
     match cmd {
-        AudioCommand::Play(path) => match open_audio_source(&path, amplitude.clone()) {
+        AudioCommand::Play(path) => match open_audio_source(&path) {
             Ok(source) => {
                 sink.stop();
                 sink.append(source);
@@ -264,10 +256,7 @@ fn apply_command(sink: &Sink, cmd: AudioCommand, amplitude: &Arc<AtomicU32>) {
         },
         AudioCommand::Pause => sink.pause(),
         AudioCommand::Resume => sink.play(),
-        AudioCommand::Stop => {
-            sink.stop();
-            amplitude.store(0, Ordering::Relaxed);
-        }
+        AudioCommand::Stop => sink.stop(),
         AudioCommand::Seek(pos) => {
             if let Err(e) = sink.try_seek(pos) {
                 log::warn!("seek failed: {e}");
@@ -275,12 +264,6 @@ fn apply_command(sink: &Sink, cmd: AudioCommand, amplitude: &Arc<AtomicU32>) {
         }
         AudioCommand::SetVolume(v) => sink.set_volume(v.clamp(0.0, 2.0)),
     }
-}
-
-fn emit_amplitude<R: Runtime>(app: &AppHandle<R>, amplitude: &Arc<AtomicU32>, playing: bool) {
-    let raw = amplitude.load(Ordering::Relaxed);
-    let value = if playing { raw as f32 / u32::MAX as f32 } else { 0.0 };
-    let _ = app.emit("playback:amplitude", value);
 }
 
 fn emit_progress<R: Runtime>(app: &AppHandle<R>, state: &Arc<Mutex<SharedState>>, sink: &Sink) {
@@ -304,7 +287,6 @@ fn check_track_end<R: Runtime>(
     app: &AppHandle<R>,
     state: &Arc<Mutex<SharedState>>,
     sink: &Sink,
-    amplitude: &Arc<AtomicU32>,
 ) {
     if !sink.empty() {
         return;
@@ -352,7 +334,7 @@ fn check_track_end<R: Runtime>(
     let Some(ref path) = song.file_path else {
         return;
     };
-    let Ok(source) = open_audio_source(path, amplitude.clone()) else {
+    let Ok(source) = open_audio_source(path) else {
         return;
     };
     let dur = source
@@ -384,12 +366,8 @@ fn check_track_end<R: Runtime>(
     );
 }
 
-fn open_audio_source(
-    path: &str,
-    amplitude: Arc<AtomicU32>,
-) -> CommandResult<MeterSource<SymphoniaSource>> {
-    let raw = SymphoniaSource::from_path(Path::new(path)).map_err(AppError::state)?;
-    Ok(MeterSource::new(raw, amplitude))
+fn open_audio_source(path: &str) -> CommandResult<SymphoniaSource> {
+    SymphoniaSource::from_path(Path::new(path)).map_err(AppError::state)
 }
 
 #[derive(Debug, Clone, serde::Serialize)]

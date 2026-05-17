@@ -5,12 +5,6 @@ import { formatDuration } from './mock-data.js';
 import { skipTrack } from './player-actions.js';
 import { showToast } from './components/toast.js';
 
-let latestAmplitude = 0;
-
-export function getAmplitude() {
-  return latestAmplitude;
-}
-
 function paintProgress(position, duration) {
   const pct = duration > 0 ? (position / duration * 100) + '%' : '0%';
   document.querySelectorAll('[data-progress-fill]').forEach(fill => { fill.style.width = pct; });
@@ -67,11 +61,6 @@ function registerTauriListeners() {
       libraryAlbums: data.albums || getState().libraryAlbums,
     });
     showToast(`曲库已更新（${data.imported ?? 0} 首新增）`);
-  });
-
-  win.listen('playback:amplitude', event => {
-    const v = Number(event.payload);
-    if (Number.isFinite(v)) latestAmplitude = Math.max(0, Math.min(1, v));
   });
 }
 

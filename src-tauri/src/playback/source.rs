@@ -1,11 +1,5 @@
 use rodio::{source::SeekError, Source};
-use std::{
-    fs::File,
-    io::ErrorKind,
-    path::Path,
-    sync::{atomic::{AtomicU32, Ordering}, Arc},
-    time::Duration,
-};
+use std::{fs::File, io::ErrorKind, path::Path, time::Duration};
 use symphonia::{
     core::{
         audio::{SampleBuffer, SignalSpec},
@@ -180,76 +174,5 @@ impl Source for SymphoniaSource {
         self.cursor = 0;
         self.cursor_end = 0;
         Ok(())
-    }
-}
-
-/// Wraps an `f32` source and records the most recent peak amplitude into a
-/// shared atomic. Reader sees u32 = clamp(|sample|, 0.0, 1.0) * u32::MAX.
-pub struct MeterSource<S> {
-    inner: S,
-    amplitude: Arc<AtomicU32>,
-    window_size: usize,
-    window_peak: f32,
-    window_count: usize,
-}
-
-impl<S: Source<Item = f32>> MeterSource<S> {
-    pub fn new(inner: S, amplitude: Arc<AtomicU32>) -> Self {
-        let window_size = (inner.sample_rate() as usize / 60).max(256);
-        Self {
-            inner,
-            amplitude,
-            window_size,
-            window_peak: 0.0,
-            window_count: 0,
-        }
-    }
-
-    fn commit(&mut self) {
-        let scaled = (self.window_peak.clamp(0.0, 1.0) * u32::MAX as f32) as u32;
-        self.amplitude.store(scaled, Ordering::Relaxed);
-        self.window_peak = 0.0;
-        self.window_count = 0;
-    }
-}
-
-impl<S: Source<Item = f32>> Iterator for MeterSource<S> {
-    type Item = f32;
-
-    fn next(&mut self) -> Option<f32> {
-        let sample = self.inner.next();
-        if let Some(value) = sample {
-            let abs = value.abs();
-            if abs > self.window_peak {
-                self.window_peak = abs;
-            }
-            self.window_count += 1;
-            if self.window_count >= self.window_size {
-                self.commit();
-            }
-        }
-        sample
-    }
-}
-
-impl<S: Source<Item = f32>> Source for MeterSource<S> {
-    fn current_frame_len(&self) -> Option<usize> {
-        self.inner.current_frame_len()
-    }
-
-    fn channels(&self) -> u16 {
-        self.inner.channels()
-    }
-
-    fn sample_rate(&self) -> u32 {
-        self.inner.sample_rate()
-    }
-
-    fn total_duration(&self) -> Option<Duration> {
-        self.inner.total_duration()
-    }
-
-    fn try_seek(&mut self, pos: Duration) -> Result<(), SeekError> {
-        self.inner.try_seek(pos)
     }
 }
